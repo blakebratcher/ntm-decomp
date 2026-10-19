@@ -1,0 +1,6 @@
+# fin-b lane symbol table (inner/secondary entries, CPU range [0x62000, 0x6c000)).
+# <hex addr>	<name>	<evidence>
+# Rows here name entries that lost their own source file when this lane
+# merged them into the source that owns their bytes; apply_names keeps the
+# inner labels in sync.  Names are moved verbatim from their previous table
+# (see the private lane report); the coordinator drops the old rows on merge.

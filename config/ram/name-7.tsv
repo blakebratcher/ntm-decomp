@@ -1,0 +1,44 @@
+# Lane name-7 RAM/hardware symbols for fixed P1 [0x780fe, 0x7e540).
+# Rows: <hex addr>  <hex size>  <name>  <evidence>.
+# Work RAM is 0x100000-0x10ffff; LSPC registers are listed with their
+# addresses so the fix-layer writers in this lane read clearly.
+100000	2	dev_flags	development flag word: retail code only clears it (clr.w at 0xe230 and 0xe3c2, move.w #0 at 0xe3cc in the BIOS dev-mode branch and 0xe4de). Bit 0 = debug hole select: 0xeabc and 0xed80 branch to 0xead0 (draws "NO.   HOLE START" from 0xe533) instead of hole_start_continue; the results screen (0x78d0a, 0x78eb4) and 0x58442/0x5ae8c test it too. Bits 1/7 (0xd5f6), 3 (0x4cbe) and 4 (0x59c18) are other dev toggles
+102c38	1	ball_state_flags	bit 0 = ball rolling (set at $782a after 5 bounces or vz <= 2.0, and at putt launch $4cbe; $5ac64 then runs the roll step $95aa instead of the airborne update); bit 1 = motion over (set by $bc78, OB clamp $5b1a0, $974a, $9544, $4cbe; $5ac64 branches to ball_stopped_state); read by 0x7d438 and 0x7da78
+102e5e	2	vram_addr_shadow	LSPC VRAMADDR shadow: 0xe41c copies it to $3c0000 each vblank; saved/restored around IRQs (0xd4c8, 0xe440) and seeded from 0xa00
+102ea2	1	round_pause_flag	per-frame sound_cmd_reply value stored by the frame barrier at $d5b0 ($ff = no new reply, else the 7-bit reply), not a pause flag: 0x7e302 spawns the attract scenes when reply 0 arrives (or after $78 frames), 0x7e39e/0x7e402 end scenes on reply 0; also read by the award wait 0x7b070 (not re-checked with this meaning) (semantic-review-p1-7d4be)
+102eae	1	video_50hz_flag	50 Hz flag: REG_LSPCMODE read bit 3 stored by 0xe4ae every vblank (1 = PAL); 50 Hz timer values +$3000 at 0x6e4c6/0x6367e and shorter frame counts at 0x71e40/0x72638/0x7e402 (0x782e6 meter timeout $c8)
+102ebc	1	course_sound_sent_latch	bit 7 = once-latch of course_sound_cmd_once 0x58840; cleared on game over (0x7c52c path) and at 0x5addc/0xeb7e/0x58442/0xec0e; not a coin/entry state (semantic-review-p1-7c2d2)
+102ebd	1	continues_used_p1	P1 continues used: +1 per accepted continue (0x7c4ac), shown by the continue tally 0x7cf10; $80 = card-resume marker (0xe7f4) (semantic-review-p1-7c2d2)
+102ebe	1	continues_used_p2	P2 continues used: same as 0x102ebd for P2 (semantic-review-p1-7c2d2)
+104fcf	1	fade_done	fade state: 0 while a fade runs (0xb9740, 0xb97d2, 0xb99fa, 0xb9890 clear it at the start), $ff when done (0xb9814, 0xb9890); waiters (0xf43c, 0x7901e, 0x7904a, 0x79076) proceed when nonzero
+106fd2	2	golfer_anchor_x	written only by golfer_x_offset 0x55038 (golfer +$30 - $40, also kept in golfer +$4a); the target x of 0x79e66 (golfer zoom-in end, shot card exit); 'ball' is unproven
+107005	1	golfer_id_p1	golfer id of player 1; 0xff = unset - the meter bust actors substitute $10702b in attract (0x786a6)
+10702b	1	golfer_id_p2	golfer id of player 2; the P2 source in attract mode
+107082	1	shot_kind	shot kind (pending rename shot_kind): 0 at every shot setup (0x58274), 1 = full swing (0x58442), $ff = green/putt shot (0x58680 when the lie 0x106fd6 is 3); only these three writers. Negative: putt physics (skips ball_motion_sweep $95ba, runs $b14a/$b93c, friction $c000 at $9800, hole radius $6000), the finer aim curve and halved aim range ($bdc6/$56582), the 'FOR <score>' banner and sound (0x79f7e/0x79cf4/0x79c34), no hole-object actors (0x2d8a); == 1 required by $9766 and $bc78 snapping; read by 0x7d3b4 and 0x5ac54; not a score status
+107083	1	ball_holed_flag	$ff set by ball_hole_out_event 0xbc78 (with $107082 = 1) when the ball is holed: selects the in-cup step 0xb6a0 in the ball driver and distance 0 in 0x5a8d6; triggers the celebration actor 0x7ac3e
+10d4a2	2	camera_scroll_dx	camera scroll step x from camera_clamp_b (0x5aea0), 0 for putts; used by camera_shift_actor 0x59218, scroll_delta_split and the trail actor 0x7da78
+10d4a4	2	camera_scroll_dy	camera scroll step y, companion of 0x10d4a2 (0x5aea0, 0x7da78, 0x59218)
+10d4a6	4	camera_scroll_speed	the two camera scroll step words above as one long (0x5aea0 writes the swapped pair)
+10d4bd	1	hole_number_lo	low byte of the hole_number word 0x10d4bc, not a player index: keys course<<8|hole at 0x799ea and 0x61620 (semantic-review-p1-79204)
+10d4d2	2	hole_band_lo	low y edge of the per-hole band (hole_band_lookup 0x5a19c; -1 = no band), the pair of hole_band_hi $10d4d4; read by the sweep $7eba/$800a, 0x5929a, 0x5aff0, 0x56416, 0x61ade; gates the shot-result stream walk in 0x7a040; 0x7a040 ends its palette streams at the $ffff marker when negative; water-crossing y band on G.CANYON 2/12, FUJIYAMA 4/17, SEASIDE 8/11: ground_height_query returns -$d55 except on $12af cells (semantic-settle-round-flow).
+10d4e4	4	contest_record	contest record (16.16): max shot distance on a longest-drive hole / min ball-pin distance on a nearest-pin hole; seeded by 0x5a9a2, updated by 0x5a8d6, printed by 0x79476 (YARDS, or m/cm / ft/in); also read by 0x79cf4/0x59daa; not a score
+10d4e8	4	contest_record_prev	previous value of the contest record 0x10d4e4 (0x5a8d6)
+10d4ec	1	contest_record_holder	player byte holding the contest record 0x10d4e4 ($ff at hole_load 0x5a13c; 0x5a8d6); read by 0x7b398/0x7b60c for the pose side and 0x6cce2; holder byte is a player record's +0 slot byte (0x5a8d6), so 1 = the P2 record; 0x703dc/0x705dc/0x7079a test it (== 1 / != 0 selects the P2 forms) (semantic-review-p1-6f9ee)
+10d504	2	ball_screen_pos_x	ball actor +$30 (screen x), published each frame by 0x5aea0; consumed by the ball trail 0x7da78
+10d506	2	ball_screen_pos_y	ball screen y published by 0x5aea0: actor +$32 after the z offset (not the player record +0xc); read by ball_trail_publish 0x7da78 (semantic-review-p1-009e0)
+10d508	4	ball_y_published	word = player record +8 high word (ball y), published at 0x5afbc; the trail actor 0x7d960 flips it by +-0x30 for the trail's screen offset; not a distance
+10d50c	4	ball_z64_published	word = player record +$c high word = int(64*ball z), published by 0x5af94; 0x7d960 compares it with the previous frame
+10d511	1	round_end_flag	set when a round/shot sequence completes (0x7b398, 0x7c2d2), cleared by the round code 0x5ac62 - read by 0x5b6c8
+10d51f	c	p2_input_state	P2 input record, same layout as 0x10d514 (0x60200 merges 0x10d51f/0x10d520/0x10d521)
+10d52e	60	player_status_p1	P1 0x60-byte status block (a6+0x43 in the hole-stock panel selects it); +$44 = hole stock (0x10d572; inc/dec/get 0x5ab4e/0x5ab82/0x5abc6), the only field read there; the +$40..+$43 bytes copied by 0x7ca92 are the panel actor's own fields (semantic-review-p1-7c2d2)
+10d58e	60	player_status_p2	P2 status block, 0x60 bytes after 0x10d52e
+10ebf8	1	results_busy_flag	skip flag of the pre-hole intro screen: cleared by 0x78c40, set to 0xff by 0x78c98 on an A/B/C edge while the auto bits of $10ebf9 are set (fast-forward), polled by the panel actors in 0x790..-0x7a1.., which then snap to their targets (semantic-review-p1-782e6)
+10ebf9	1	results_outcome_bits	hole-kind bits set by 0x78d0a, no score comparison: outside game_mode 2 bit 1 = longest-drive hole, bit 2 = nearest-pin hole (contest_hole_lookup 0x5aa76 sign); game_mode 2: bit 5 = P1 holes won - lost < 0, bit 3 = |standing| == 18 - hole, bit 4 = |standing| == 19 - hole (match_holes_up 0x5a8ba); read by the panel actors and 0x78c98 (semantic-review-p1-79204, semantic-review-p1-782e6)
+10ebfa	1	celebration_flag	1 = the celebration/prize ceremony is running (0x7ac3e, 0x7afec set it, 0x7b070 clears it to 0xff)
+10ebfb	1	pose_side_flag	mirror of the pose screen's side flag copied by 0x7b53e and watched by 0x7b908 (frame selection); set/cleared by the continue screen 0x7c2d2
+10ebfc	1	stock_panel_rendezvous	two-panel rendezvous counter of the hole-stock panel: 0x7c24e sets 1 outside match play; in match play the first panel sets 1 and waits at 0x7c5ce for the other's increment to 2 (0x7c5b4-0x7c606); no coin state (semantic-review-p1-7c2d2)
+10ebfd	1	stock_count_done_flag	set to 1 when a hole-stock panel finishes counting (0x7c3de), read by the other panel's wait (0x7c352, match play with a negative change); not a continue prompt confirmation (semantic-review-p1-7c2d2)
+10ebfe	b4	ball_trail_history	30 entries x 6 bytes {x (0 = empty), y, frame byte offset into $7da26}: written/shifted by 0x7da78 (write offset wraps at $b4), read by the trail actor 0x7d960; not 0x1d x 8 (semantic-review-p1-7d4be)
+10ecb2	1	shot_end_state	ball-trail session counter: written only by ball_trail_init 0x7d8bc (addq.b #1); 0x7d8fe compares it with its copy +$13 and ends when a newer session started (semantic-review-p1-7d4be)
+10fd8d	1	soft_dip_continue	BIOS_GAME_DIP+9, soft DIP list 4 'CONTINUE' (OFF/ON): on MVS with it 0 (OFF) the decided-match path at 0xedd2 clears both hole stocks $10d572/$10d5d2; also read by the continue screen 0x7c2d2
+10fd91	1	soft_dip_demo_sound	BIOS_GAME_DIP+$d, soft DIP list 8 'DEMO SOUND' (WITH / WITH OUT): gates the sound-command sender 0x804de in attract and the VS sequence 0x7e39e; not a demo-play flag

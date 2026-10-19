@@ -1,0 +1,8 @@
+# lane boundaries region rows (the private lane report); format:
+# <hex start>	<hex size>	<kind>	<name>	<evidence>
+# These bytes were covered by function sources whose "filler-immediate" dc.w
+# runs are actually data words (no assembler emits a nonzero high byte in a
+# byte-immediate), reclassified as data with consumer evidence.
+5050	2a0	data	p1_5050_golfer_tables	six 0x70-byte per-golfer tables 0x5050/0x50c0/0x5130/0x51a0/0x5210/0x5280, the targets of the golfer table pointer list 0x5038 (movea.l ($c,PC,D1.w),a1 at 0x502a, golfer id 0..5); each holds 14 {u32 lo, u32 hi} 16.16 records indexed by bag slot $106fde * 8 (0x502e-0x5034), read by accuracy_err_lo move.l (a1,d1.w),d1 at 0x52f4 and accuracy_err_hi move.l ($4,a1,d1.w),d1 at 0x52fe; slot 13 (putter) = {0,0} in all six. Final reconstruction: re-cut from 0x5076 (mid-table); the earlier "0x35ca / 0x12b8 pointer tables" were values in aim_rot_sin_table / p1_sin_quadrant_table, not pointers
+5bc4	1fa	data	boundaries_5bc4_records	power curve 5 tail (from mid-entry 42, $5bc2) to $5c2a, then the putter power curve at $5c2a: 101 16.16 longs $0811..$10a89 (1.0 at index 95) indexed by power*4, selected by lea ($5c2a,PC) at $559c when bag slot == $d, read at $55a8; ends at $5dbe (launch_scale_h_get)
+5e16	180	data	boundaries_golfer_ptrs_5e16	golfer list $5e16 (6 longs -> $5e2e+$3c*g) and six 15-long per-golfer table lists [0x5e2e,0x5f96) (every long = $5f96+$38k, k = 15g..15g+14, all 90 distinct); launch_scale_lookup $5de2: movea.l ($5e16,PC) at $5df0, then movea.l ($0,a1,d1.w) at $5e08 with d1 = ((record+3) + $106fd6)*4; the tables themselves are launch_scale_tables 0x5f96

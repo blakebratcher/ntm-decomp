@@ -1,0 +1,7 @@
+# fin-c lane symbol table ([0x6c000, 0x78000) consistency pass).
+# <hex addr>	<name>	<evidence>
+# Merged with the other config/names/*.tsv by tools/symbols.py.
+0006c5d8	stroke_final_notice_pt	Portuguese entry of the 0x6c5a2 table of 0x6c562: string 0x6c853, hole number at X26 Y15
+0007545e	water_sparkle_scan_actor	Water-sparkle spot scanner spawned at $5ac5e: requires all nine points of a 3x3 $10 grid near the ball to be water cells $90/$190 ($75664), then spawns water_sparkle_actor_init $75686 at the centre; blue-white twinkles confirmed in semantic-settle-misc-p1.
+00075686	water_sparkle_actor_init	Initializes the water-sparkle $32de-script actor: palette slot $1f, actor +$12 bit 1, falls into water_sparkle_actor $7569c; spawned by water_sparkle_scan_actor $7545e (lea at $755dc).
+0007741a	scorecard_banner_actor	Scorecard banner actor (fin-c block): record 0x774d0, slide in/out on 0x10ebe4; sibling of scorecard_extra_sprite_actor 0x7732c

@@ -1,0 +1,80 @@
+# finish lane symbol table (p1-residue blocks outside the name-1 window).
+# <hex addr>	<name>	<evidence>
+# Merged with the other config/names/*.tsv by tools/symbols.py; the
+# name-1 window is covered by config/names/name-1.tsv (written by
+# tools/lane_name1_annotations.py), and the name-6 window docs live in
+# tools/lane_name6_headers.py.
+0000d54a	attract_start_wait	Attract start-wait driver (MAME exec root): resets the task cursor/head,
+0000d5f6	boot_vblank_service	Boot-screen vblank service (MAME exec root): polls the REG_P1CNT start/select
+0000d67c	game_init_core	game init core: palette_shadow_clear 0xca866, start_block_clear 0xd9d4, vram_reset_all 0x678, boot_init_actor_pool 0x428, input_select_real 0x84fdc, input_set_repeat 0x84fec ($200a), with a watchdog write to $300001 before each of the first five calls; called by 0xe4c6
+0000d8ea	start_credit_poll	Start/credit poll (MAME exec root): when BIOS_MVS_FLAG is set or the start
+0000d958	start_action_poll_b	Start action poll: reads BIOS_STATCHANGE and the BIOS coin/start words
+0000e3ee	user_req_demo_title	BIOS_USER_REQUEST 2/3 (demo/title) entry, entries 2 and 3 of the $e39e table: BIOS_USER_MODE = 1, bsr game init 0xe4c6, then 0xe3fa jmp 0x5b4
+0000e3fa	user_enter_main_loop	return point of bsr 0xe4c6 at 0xe3f6: jmp 0x5b4, the actor main loop (never returns)
+0000e43e	raster_hook_rts_stub	initial raster hook (bare rts) stored in $102ea8 by user_entry 0xe36e; called by the level-2 handler 0xe41c
+0000e4c6	game_init	game init: FIX_CLEAR ($c004c2), game init core 0xd67c, then falls into 0xe4d2 (sound queue init 0x802bc, input_sampler_reset 0x60198, dev_flags = 0, rts); called by bsr at 0xe3f6
+0000e4d2	game_init_tail	fall-through tail of 0xe4c6 after the jsr 0xd67c at 0xe4cc (no other reference): sound_cmd_queue_init 0x802bc, input_sampler_reset 0x60198, dev_flags $100000 = 0, rts
+0000e8cc	title_dispatch_tail	bra $e8d4 (golfer select): taken by beq at 0xe8b4 when game_mode is 0 and the card byte $10ef48 is 0
+0005ac54	ball_actor_entry	ball actor entry (spawned via lea at 0x58736 / 0x58442): shot_kind 0x107082 < 0 (putt) skips only the 0x7545e spawn whose jsr is at 0x5ac64; ball_actor_setup at 0x5ac64 runs in both cases
+0005b216	ball_ground_sprite_actor	child sprite of the ball actor (probably the shadow, not proven): allocates palette $18, x overwritten from the parent, per-frame state $5b246: pos_from_parent, y += ((h*3)>>6) - 1 from the 0x5929a height sample, priority = parent's - 1, frame $8cda8 when shot_kind < 0, drawn through ball_draw_unless_clipped
+000601b0	bios_input_copy	Boot input/config copy (MAME exec root): after input_sampler (0x85086),
+00068086	record_search_dispatch	Record search dispatch: three entries (0x68086/0x6808e/0x6809c) pick one of
+0006ad20	course_select_enter	Demo intro actor: blits the wrap map, draws the 0x6ad1a image stream, waits
+0006b7c8	attract_menu_setup	Attract menu setup (MAME exec root): resets the fix layer, clears palette
+0006b9dc	attract_intro_spawn	attract intro screen actor, spawned by attract_menu_setup 0x6b7c8 (lea at 0x6b7d4): sound $33, sprite-area reset (0xd0f6), 420-frame countdown, spawns 17 strip actors 0x6bb34 (+$40 = 0..$10) and the zoom actor 0x6bbb0, then sets the parent's +$11 = -1; "attract-menu item" is unproven (semantic-review-p1-6b9dc)
+0006bb34	attract_intro_strip_actor	attract intro strip actor (17 copies from 0x6b9dc, index +$40): palette 0x131 (fade-exempt via 0xb9dc6), x and delay from the 17 word pairs at 0x6bc9e..0x6bce2, y $180, frame 0x9f60e, installs 0x6bb84; "attract-menu item" is unproven (semantic-review-p1-6b9dc)
+0006bbb0	attract_intro_zoom_actor	Attract menu cursor actor: palette 0x132, fixed at (0xa0, 0x180), frame
+0006cf90	lie_display_child_init	Title-family child init: inherits the parent's frame (parent+0x48) and
+0006cfb2	pin_quadrant_select	Address-view direction helper: when target_distance (0x10d4aa) <= 2 it folds
+0006daee	putt_setup_actor	Shot scene setup states (spawned from 0x5b43a): spawns the 0x77ecc actor and,
+0006e05e	aim_guide_dots_actor	aim guide: every frame draws five dots (frames 0x6e1b0, first 5 of 11) from the ball's screen position along the aim direction, length = byte 0x80b74[golfer id] << 16; ends when swing_lock_flag == $f0 (semantic-review-p1-6d55e)
+0006e1dc	club_frame_twin_child	child of the club swing script actor 0x6edfe (spawned by op $0a of script 0x6d746 at 0x6d756); copies the parent's palette and position, draws club_swing_frame_select variant 0 only while the parent shows variant 1; no pin involvement (semantic-review-p1-6d55e, semantic-review-p1-6eb46)
+0006e222	script_shot_power_store	script helper called by op $03 at 0x6d792 of the club swing script 0x6d746: stores shot_power 0x106fe6 into a6+0x14 for the following op $0c compares ($a, $14, $1e ...); not a pin marker (semantic-review-p1-6d55e, semantic-review-p1-6eb46)
+0006f328	vs_backdrop_slide_in	four VS slide-in entries spawned by vs_screen_init 0x6f0e2 (lea at 0x6f11c/0x6f126/0x6f130/0x6f13a): 0x6f328 left backdrop, 0x6f3ee right backdrop, 0x6f4b2 P1 golfer pose, 0x6f568 P2 golfer pose; from $1a0 off-screen at 10 px per frame, then follow vs_slide_offset; frames queued via 0x73912 (semantic-review-p1-6eb46)
+00070a1a	contest_record_cmp_dead	Panel odometer digit helper: converts contest_record_prev/contest_record
+0007176e	fade_handshake_entry_dead	dead fade-and-handshake entry: spawns fade_actor_start (0xf42c), clears +$11, installs 0x71784 and falls into it (same four instructions as 0x7164c); nothing branches here (0x7176a is bra 0x745f2); no summary panel (semantic-review-p1-71614)
+00071796	fix_stream_row_write_dead	dead fix-layer stream writer: bytes at a5 until $ff, ORed with d5, written via movem.w d6-d7 to REG_VRAMADDR/REG_VRAMRW ($3c0000/$3c0002), d6 += $20 = one column right (a horizontal run, not a column); no clipping; no summary-panel link (semantic-review-p1-71614)
+00071ed2	seq_sprite_area_palette_init	Frame-sequence tail: blits the sprite map (0x73b66) and uploads the 0x72234
+00072092	seq_stage_actor	frame 0x9ed84 at (x 0x120, y 0x180), palette 0x102, priority 0x8014; installs 0x720b8 and falls through into it; spawned by frame_seq_init 0x71e1a (lea (seq_stage_actor,PC),a1 at 0x71e24 + jsr 0x4c6)
+0007258e	meter_digit_display	meter digit display, dead (no reference; tools/reach.py), probably a debug readout: draws shot_power (0x106fe6) as 5 decimal digits at fix 0x7244; second dead entry 0x725a4 draws shot_accuracy (0x106fe8) at fix 0x71a6 and the a6 bytes +0x4b/+0x4a below it
+00073b72	scorecard_fade_setup	spawn: $eea4 lea ($73b72).l,a1 -> jsr $4c6 at $eeaa (scorecard_flow); clears the fix panel, blits the sprite map, spawns fade_request_actor and installs round-results
+00075734	wind_dir_panel_actor	direction panel spawned at 0x6db1a (lea $75734.l,a1; every mode): frame $88256 when $10d4d6 == 0 else 0x75858[$10d4d7]; slides +$30 from $79 to $24 in 16 frames on the hole's first shot ($10d4ef), signals the parent
+0007cd68	match_decided_screen	match-decided screen, spawned only at $edfe on the match-decided path of 0xed08: two 0x7c258 hole-stock panels (+$11 = 2/3: one row lower, no banner, continue offered at stock 0), then 0x7cd9e/0x7cddc (semantic-review-p1-7c2d2)
+0007cdfc	match_decided_caption_sprite	language-indexed sprite at (0xa0,0x1c8): always picks a record from 0x7d0ec; record 4 only when both hole stocks ($10d572/$10d5d2) are 0 and the BIOS is Japanese; draw state 0x7ce54 (semantic-review-p1-7c2d2)
+0007ce5a	continue_tally_screen	continue tally (AES only, game end of a non-match game past hole 18): skipped when either continue count has bit 7 set (card-resume marker); otherwise "P1 CONTINUE nn" / "P2 ..." in the 2x2 font per player with a golfer id; nothing golfer-specific is drawn (semantic-review-p1-7c2d2)
+0007cf06	continue_tally_line_entry	Continue-screen golfer panel entry: loads the 0x70cc fix stream pointer and
+0007db0a	char_select_setup	Character select setup (spawned from golfer_select_enter 0xe942): queues sound
+0007db7e	char_select_backdrop_blit	Character select driver (MAME exec root): per player (d0 = 0/1) reads the
+0007df56	char_table_lookup	Character table lookup: linear search of the 0x7e2ce byte table for d0,
+0007e01e	char_select_credit_prompt_init	Character select ready marker: palette 0x1bc, x 0x54 (P1) or 0xec (P2) by
+0007e0b4	char_select_portrait	Character portrait actor: x/y from the 0x7e17a word table by (a6+0x13)*0x14,
+000083b4	ball_collision_deflect_hard	integrate/finish carve: obstacle response handler 1 (record +$c = 1; p1_8656_dispatch entry $865a, consumer jsr (a3) at $837a); sets ball_collision_flags bit 1 (bit 2 is ball_collision_deflect_soft $85ea); 40 starts executed ($83b4-$84b4, hole-play)
+00008520	ball_collision_deflect_hard_cases	integrate/finish carve: the sector cases of ball_collision_deflect_hard, entered by blt $8520 at $84b4 (executed, hole-play); each case returns to ball_collision_fixup
+00068bf6	ball_effect_shadow_child_spawn	integrate/finish carve: ball-effect script native call (long $03068bf6 at $689e8, jsr (a0) at $6873e) that releases the children and spawns ball_shadow_actor_init with palette $e2 / frame $98d80; executed (hole-play, unibios)
+0006a780	mode_select_slidein_actor	integrate/finish carve: mode-select child spawned by lea ($6a780,PC),a1 + jsr $4c6 at $6a46e (mode_select_screen_enter); 30-frame wait, slides y $208 -> $1d0, then draws frames $9dae4/$9db14; executed in every run past the title (hole-play, unibios)
+0000e558	root_attract_title_flow	integrate/finish carve: first state of the root flow actor $100160 (init node table record $418, handler long $41c, installed at $4a2): attract demo cycle, title, how-to-play demo, falls into post_start_enter at $e7c4; 74 starts executed in every MAME run (hole-play, unibios)
+00060328	credit_status_actor_init	integrate/finish carve: initial state of the per-player status actors $10d52e/$10d58e (init node table handler longs $40c/$414, installed at $4a2); dispatches on BIOS_PLAYER_MOD through credit_status_mode_table; executed in every run (hole-play, unibios)
+0006a43e	mode_select_screen_enter	integrate/finish carve: mode-select screen entry spawned by lea ($6a43e).l,a1 + jsr $4c6 at $e86e (post_start_mode_select); falls into mode_select_director; executed (hole-play, unibios)
+0006cdf2	penalty_stroke_actor_init	integrate/finish carve: shot_result_task child spawned at $6c004; copies the parent's position/frame/priority, adds 1 to current_player_record+2, installs penalty_stroke_shrink; executed (hole-play, unibios)
+0006f0c6	club_swing_palette_pick	integrate/finish carve (block, trace-only): bag_get_club then palette slot $14 ($13 for club type $16) via palette_slot_alloc; executed in unibios runs 0-2,5-16, no static reference
+0006f0e2	vs_screen_init	VS screen entry spawned by lea ($6f0e2).l,a1 + jsr $4c6 at $ea94 (preround_intro_wait, 2P path); spawns the two fixed centre frames 0x6f772/0x6f77c and the four slide-ins 0x6f328/0x6f3ee/0x6f4b2/0x6f568, falls into vs_screen_driver (semantic-review-p1-6eb46)
+00071e1a	frame_seq_init	integrate/finish carve: round-end frame sequence entry spawned by lea ($71e1a).l,a1 + jsr $4c6 at $ef14 (scorecard_flow); spawns seq_stage_actor/seq_stage_actor_b, installs frame_seq_driver; executed (hole-play, unibios)
+000720d2	seq_stage_actor_b	second frame-sequence stage actor, spawned by lea ($720d2,PC),a1 + jsr $4c6 at $71e2e (frame_seq_init): same set-up at y 0x102, then y-1 per frame to 0xca, parent+0x11 = 1, draw only (0x72116); executed (unibios)
+0007cf10	continue_tally_line_body	integrate/finish carve (block): fall-through of continue_tally_line_entry ($7cf06 block, spawned at $7ce98); draws the continue-screen golfer panel and the two-digit count; ends jmp $54a
+0007d2ce	howto_overlay_init	how-to-play overlay entry (no camera, no putting view), spawned at $e73e (how-to-play, attract_demo_index 5) and at $6db0e (putt setup when attract_demo_index == 5) (semantic-review-p1-7c2d2)
+0007e2d4	attract_scene_sync_init	integrate/finish carve: entry of attract_scene_sync_wait spawned by lea ($7e2d4).l,a1 + jsr $4c6 at $6b822 (attract_demo_round_setup); executed (unibios, MVS attract included)
+0006b5e8	select_course_panel_init	integrate/finish carve: entry of select_course_panel_actor spawned by lea ($6b5e8,PC),a1 + jsr $4c6 at $6b07c (select_cursor_actor); executed (unibios)
+0006b94c	start_panel_init	integrate/finish carve: start_panel_draw entry (panel_fix_dest_addr $7155) spawned at $e65e (root_attract_title_flow) and $7e32c (attract_scene_sync_wait); executed (unibios)
+0006b954	start_panel_init_b	integrate/finish carve: second start_panel_draw entry (panel_fix_dest_addr $7153) spawned by lea ($6b954,PC),a1 + jsr $4c6 at $6b862 (attract_demo_round_setup)
+0006d2a2	lie_display_init	integrate/finish carve: entry of lie_display_actor (30-frame wait) spawned by lea ($6d2a2,PC),a1 + jsr $4c6 at $6bf8c (shot_result_task); executed (unibios)
+0005b62c	ball_terrain_effect_actor	integrate/finish carve: shot child spawned by lea ($5b62c,PC),a1 + jsr $4c6 at $5ade8 (ball_stopped_state); plays actor script $3328 at the ball position on cell code $190; executed (unibios); script $3328 = palette $1f + a looping 12-frame animation $8abb4..$8ac26, then 30 blank frames
+00078aa6	ranking_static_sprite_b	integrate/finish carve: record-stream entry (a5 = $78b2c, bra actor_init_from_record_entry) spawned by lea ($78aa6,PC),a1 + jsr $4c6 at $78360 (ranking_screen_actor); executed (unibios)
+00078ab0	ranking_static_sprite_c	integrate/finish carve: second record-stream entry (a5 = $78b38) spawned by lea ($78ab0,PC),a1 + jsr $4c6 at $783b0 (ranking_screen_actor)
+0006ffb0	digit_draw_decimal5	integrate/finish carve: five-digit decimal fix draw (divu 10000/1000/100/10, movem.w d6-d7 to REG_VRAMADDR), falls into fix_write_pair; jsr/jmp ($6ffb0).l x4 in meter_digit_display (0007258e.s) (sym-branch proposal)
+0007d8bc	ball_trail_init	integrate/finish carve (static sweep): ball-trail session entry spawned by lea ($7d8bc).l,a1 + jsr $4c6 at $4aa2 (landing_effect_entry); clears ball_trail_history, spawns ball_trail_enter/ball_trail_publish_reset, falls into ball_trail_session_wait; was inside the data row putt_screen_scripts
+0006f3ee	vs_backdrop_slide_in_right	integrate/finish: second entry of vs_backdrop_slide_in (block 0006f328.s +$c6): palettes $1a3/$1a5/$1a6, x target $df, installs $6f430; spawned by lea ($6f3ee,PC),a1 + jsr actor_spawn_child at $6f126 (vs_screen_init)
+0006f4b2	vs_golfer_slide_in_p1	integrate/finish: third entry of vs_backdrop_slide_in (block 0006f328.s +$18a): golfer_vs_pose_lookup on golfer_id_p1, palettes from +$4e/+$50, x target $60, priorities $104/$103, installs $6f4f6; spawned by lea ($6f4b2,PC),a1 + jsr actor_spawn_child at $6f130 (vs_screen_init)
+0006f568	vs_golfer_slide_in_p2	integrate/finish: fourth entry of vs_backdrop_slide_in (block 0006f328.s +$240): golfer_vs_pose_lookup on golfer_id_p2, x target $df, ($38,a6)=1, installs vs_golfer_slide_in_p2_tick; spawned by lea ($6f568,PC),a1 + jsr actor_spawn_child at $6f13a (vs_screen_init)
+0006f77c	vs_centre_frame_b	integrate/finish: P2 stub of vs_centre_frame_a (owner label at 0006f772.s +$a): lea golfer_name_frames+$c,a5 then the frame player; spawned by lea ($6f77c,PC),a1 + jsr actor_spawn_child at $6f112 (vs_screen_init)
+0007e31c	attract_scene_spawn	integrate/finish: spawn step of attract_scene_sync_wait (0007e302.s +$1a, owner label l_7e31c): spawns attract_scene_player_init and start_panel_init, then waits for the +$11 handshake; reached by bne.w from attract_scene_sync_init $7e2d4 (demo play, or MVS with demo sound) and by flow inside 0x7e302
+0000851e	ball_collision_fixup_exit	integrate/finish: the final rts of ball_collision_fixup (00008516.s +$8); ball_collision_deflect_hard returns through it with bne.w when ball_collision_flags bit 1 was already set (000083b4.s)

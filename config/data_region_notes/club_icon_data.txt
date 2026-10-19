@@ -1,0 +1,13 @@
+; Only the first 23 longs are club icons; the rest is leaderboard data.
+; [$832f6,$83352) 23 frame pointers indexed by club type 0..$16 (club_icon_draw
+;   0x561a0, lea at 0x561c2; also 0x5609e, lea at 0x5616e); all frame starts.
+; [$83352,$83362) 4 longs indexed by course_index: the course's 31-entry
+;   computer-name table (lea at 0x83a18, 0x83d40, 0x85a00, 0x85b02).
+; [$83362,$83552) 4 x 31 longs, each a pointer to one of the names below.
+; [$83552,$838ea) 124 $fe-terminated ASCII names, then one 0 pad byte.
+; [$838ea,$838f2) 2 longs $838f2/$838fb read through lea at 0x85c10.
+; [$838f2,$83904) "PLAYER 1" and "PLAYER 2", $fe-terminated (also stored
+;   as immediates at 0x83a78 / 0x83a9c).
+; [$83904,$83a0c) 12 x 22-byte signed stroke-delta tables (-2..+3), reached
+;   through the par 3/4/5 pointer tables $83c92/$83ca2/$83cb2 of
+;   leaderboard_delta_table_pick 0x83c50.

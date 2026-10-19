@@ -1,0 +1,56 @@
+# Symbolic names for decompiled functions, sourced from the decoded evidence in
+# the companion RE workspace (the companion RE workspace (outside this repository)).
+# Format: <hex addr>	<name>	<evidence note>
+# tools/apply_names.py renames the labels in the private corpus
+00002908	div_fixed_unsigned	unsigned restoring division (a<<16)/b; bit-exact port
+00002c20	div_fixed_signed	signed wrapper around div_fixed_unsigned
+000027c6	sqrt_newton	Newton sqrt, guess (x+1.0)>>1
+000074c0	vec2_normalize	recomputes the unit vector from pre-tick velocity
+000005d8	vram_queue_flush	vblank flush of the double-buffered (addr,data) queue at 0x102670/0x1028f2
+0000064c	sprite_list_clear_stale	writes 0x8000 (hidden) into stale SCB3 entries
+0000071e	sprite_list_insert	inserts sprite nodes into the 0x102654 list
+00000728	sprite_list_insert_prio	inserts nodes into the 0x1020a2 list; 0x12-byte node format
+00000788	sprite_list_build	per-frame sprite list from the two node lists (the workspace cites 0x78c; the entry per Ghidra is 0x788)
+00000878	sprite_node_render	turns each node into SCB1-4 writes through the queue
+00000f08	actor_draw	draws the actor's current frame into the 0x1020a2 list
+00000f2e	actor_draw_alt	second actor draw path (0x102654 list)
+0000d1ee	sprite_map_blit	2D map of 4-byte cells into SCB1, 32-tile strips
+0000d34a	scb_write_shrink	SCB2/3/4 writes (shrink, Y, X)
+0000d0f6	sprite_map_blit_wrap	wrapper around sprite_map_blit
+0000d15e	sprite_map_blit_wrap_d15e	wrapper around sprite_map_blit
+0000d2e2	sprite_map_blit_wrap_d2e2	wrapper around sprite_map_blit
+00076c88	scorecard_leaderboard_row_draw	fix-layer scorecard digits and markers
+000ca892	palette_upload	vblank copy of the dirty palette shadow to palette RAM
+000ca4e6	palette_fade_step	fade/cross-fade engine step
+000ca55e	palette_fade_step_ca55e	fade step variant
+000ca5e2	palette_fade_step_ca5e2	fade step variant
+000ca6fc	palette_fade_optional	optional fade path
+000ca766	palette_fade_optional_ca766	optional fade path
+00054dd2	golfer_setup	per-golfer swing/putt pose table setup
+000b9a22	palette_slot_alloc	allocates hardware palette slot 0x40+n from the free list
+00080ce6	swing_engine	7-long rows, club variants, contact/commentator events
+00080e5a	swing_timing	writes +$13/+$14 (and +$1c) row timing from the low byte of shot_power, not a vblank count in d0 (semantic-review-p1-7fca6)
+00080c58	putt_engine	3-long rows (body, body, putter)
+00080e8c	putt_timing	writes +$13/+$14 row durations from the inline lists at 0x80ebe; their 0 bytes are stream terminators (a 0 duration freezes putt_engine) (semantic-review-p1-7fca6)
+00080f56	bag_get_club	bag lookup by club index
+00055c74	club_hud_draw	club HUD: name stream ($55ef0 by bag entry +2) at fix $723b; bag index $d draws stream $56476 into the loft slot $711b and sets $106fd4 bit 7; otherwise distance word/4 -> BCD -> digits ($55e6e) at $729b/$72bb/$72db + unit $55ee6 at $72fb, and redraws the loft stream if $106fd4 was set; returns nothing
+0005a9a2	contest_record_seed	contest record seed, called only from hole_load 0x5a14e when contest_hole_lookup is nonzero: + hole (drive) from the golfers' bag entry-0 words + rng + difficulty_level, (avg + 8*(r1+r2+2*cond))/4 + 10.0; - hole (pin) max(1.0, (2(r1+r2) - cond)/4); no bag access
+00056826	bcd_convert	BCD conversion helper
+00055d64	club_auto_pick	club pick by distance vs target 0x10d4aa
+000561a0	club_icon_draw	club icon draw variant
+00056022	club_icon_actor	club icon palette loading
+0006f772	vs_centre_frame_a	two fixed VS centre frames 0x9e3ea/0x9e43a at (0xa0,0x1c8) (stubs: lea table, bra $73760), not golfer names (semantic-review-p1-6eb46)
+0006f6c8	vs_p1_name_label	P1 counterpart of vs_p2_name_actor: indexes the 6-long golfer frame table 0x6f7aa (not a 12-byte name record), x $60 (semantic-review-p1-6eb46)
+0000d6f8	fix_stream_draw	fix-layer stream (set addr / word / byte blocks)
+0000ef7e	challenger_join_enter	challenger join, installed on the root actor $100160 by start_latch_consume 0xd6c4 (move.l at 0xd6ee) when challenger_request is set: jsr 0x80454, sound commands $26 and $1187, REG_PALBANK0 strobe, screen hook $d4ae; falls through into challenger_join_setup $efd2; not a coin path
+0000e36e	user_entry	USER vector entry
+0006854c	swing_contact_spawn	spawned on the swing contact event
+00080eda	swing_power_sound_send	swing command 1: a jump table maps golfer ids 0/2, 1/3 and 4/5 to three sound-code sets (122 bytes); that the codes are commentary is unproven (semantic-review-p1-7fca6)
+000009e0	sprite_walker	SCB1/SCB2/3/4 walker for the big frame records; 32-way unrolled part loop entered through the sprite_node_render table at $95c (entry k = row count, k=32 -> $9e0)
+0006f632	golfer_vs_pose_lookup	indexes 6-entry golfer tables (0x6f7c2/0x6f7da) by golfer id; uninitialized 0xff ids were the title-crash vector
+00073912	actor_get_params_and_insert	unpacks the actor draw fields from A6+0x2c, then jmp 0x728 (sprite_list_insert_prio)
+00060268	button_edge_check	edge check on 0x10d52b & 0x70 (session-8 finding)
+0000e440	vblank_irq	level 1 (vblank, slot $64) and level 3 (slot $6c) handler: BIOS_SYSTEM_MODE bit 7 clear -> jmp BIOS $c00438; else saves all, VRAMMOD = 0, vblank work 0xd430 (the IRQ ack is there), 50 Hz flag 0xe4ae, REG_LSPCMODE = $102eac without bit 4 (timer IRQ enable) around the BIOS calls $c004ce/$c0044a, restores $102eac and VRAMADDR, rte
+0000d4ae	screen_hook_install	installed screen hook at 0x102ea8 (session-8 finding)
+00063b5e	screen_hook_install_63b5e	screen hook variant at 0x102ea8 (session-8 finding)
+000075aa	airborne_velocity_update	per-tick wind, drag, sidespin, lift and gravity; calls vec2_normalize

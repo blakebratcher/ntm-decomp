@@ -1,0 +1,2 @@
+# Complete the first pair of the backwards-indexed scale table.
+0604ac	000248	data	hole_map_scale_pair_head	table A: 73 x {signed 16.16 full, half} pairs [0x604ac,0x606f4), every full=2*half and pairs strictly increase. Consumer 0x616e0 in hole_map_bar_width reads the long at 0x606f0 - 8*((424-y)/2) (y=280 selects 0x604b0); hole_wipe_rows_build 0x638d4 scans it backwards from its end 0x606f4, where table B = -A (p1mid_data_606f4) starts

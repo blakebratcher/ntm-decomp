@@ -1,0 +1,340 @@
+# M1 (Z80 sound driver) names, lane m1-name.
+# Format: <8-hex addr><TAB><name><TAB><evidence note>
+00000000	m1_reset	reset vector; DI, OUT(0x18) disables command-latch NMI (data ignored by MAME Neo Geo sound-interface handler), JP 0x1e00; not a bank-latch write
+00000008	ym_reg_write	rst 8 target; 0x0008-0x001d busy-wait + reg/data write, callers every YM write site
+00000020	vector_pad	RST 2/3/4/5 vector slots, 16x nop, no reference anywhere
+00000030	rst30_voice_clear	rst 30 target; called at 0x256b/0x3798/0x3ffc with IX = a voice record
+00000038	timer_irq_vector	rst 38 vector (im 1 set at 0x1e3a), jp 0x1e7a
+00000066	nmi_vector	nmi vector, jp 0x1ed6
+00001e00	driver_init	entry from reset 0x0003; init calls at 0x1e0d-0x1e37, main loop 0x1e3f
+00001e6b	ym_timer_init	called once from 0x1e37; rst 8 writes of regs 0x24/0x25/0x27
+00001e7a	timer_irq_handler	rst 38 target via 0x0038; YM reg 0x27 write at 0x1e8c, status read 0x1e99, out (c),b at 0x1ea6
+00001eb3	cmd_queue_init	called from driver_init 0x1e10; writes 0xf80f/0xf810
+00001ebb	cmd_queue_pop	called from cmd_process 0x2050; ring 0xfff0 indexed by 0xf80f/0xf810
+00001ed6	sound_cmd_nmi	nmi vector via 0x0066; reads port 0x00, queue push at 0x1ef9
+00001f54	note_delta_pair	caller 0x416b in the ADPCM-B tick; tables 0x1400/0x1500 pages
+00001f7d	bank_window_reset	called from driver_init 0x1e0d; port-B reads of 0x0b/0x0a/0x09/0x08
+00001fa6	banked_ptr_load	nine call sites (0x20e1/0x20f6/0x2136/0x214b/0x3f9f/0x4331/0x4b7b/0x4b80/0x525b); port-B select + add hl,de; evidence in docs/lanes/m1.md
+00001fe5	voice_rec_init_music	called by 0x255d; (ix+2)=0x00 set by the caller, fields at 0x1fe8-0x2017
+0000201b	voice_rec_release	called (call nz) from every per-frame service when bit 3 of the sequence flags is set; 14 call sites
+0000203f	cmd_state_reset	called from driver_init 0x1e13
+00002050	cmd_process	main-loop call 0x1e43; tables 0x2076/0x20b3 and guards 0x205b-0x20a3
+000020d3	cmd_nop	16 table slots in 0x2076/0x20b3 point here; single ret
+000020d4	cmd_play_song	table 0x20b3[0]; banked record 0x0084, block 0x4fa3, call 0x5251
+00002101	cmd_stop_song	table 0x2076[2]; 0x4f88 call, ix=0x24de, jp 0x4fa3
+0000210f	cmd_song_stop_flag	table 0x2076[0x0c]; 0xf816 = 0xff
+00002156	cmd_voice_24f7	table 0x2076[0x0f] (unreachable: the 0x0f guard returns first), ix=0x24f7, jp 0x507b
+0000215d	cmd_sfx_stop_all	table 0x2076[4]; call 0x4c84 then 0x504e
+00002163	cmd_seq_stop_all	table 0x2076[5]; jp 0x4c84
+00002166	cmd_drum_stop_all	table 0x2076[6]; jp 0x504e
+00002169	subcmd_queue_song	table 0x20b3[7]; copy 0xf815 -> 0xf817
+00002170	subcmd_play_queued	table 0x20b3[8]; 0xf815/0xf817, shared tail 0x4f5b
+0000217e	subcmd_set_next_song	table 0x20b3[9]; 0xf815 -> 0xf818
+00002185	subcmd_fade_out	table 0x20b3[0x0a]; 0xf808=1 then jp 0x4f88
+00002190	subcmd_fade_in	table 0x20b3[0x0b]; 0xf808=0 then jp 0x4f88
+0000219b	voice_def_ops_load	callers 0x2ad1/0x3f50/0x428b (type 0/2/3 note-on); table pages 0x1b00/0x1c00
+00002208	voice_op_key_on	callers 0x2b1a/0x3fc6/0x436a (trigger handlers of types 0/2/3)
+00002219	voice_op_key_off	ten callers, e.g. 0x2735 in the SSG service and 0x3f3d in the ADPCM-A service
+0000222d	eg_step	ten callers, one per channel in each per-frame service; state machine blocks 0x2247-0x229c
+0000229d	voice_sub_clear3	callers 0x2575/0x2581/0x2be5/0x2bf1/0x4006/0x4012
+000022a8	voice_rec_load_ops	callers 0x2ae0/0x2aed/0x35e3/0x35f0/0x429a/0x42a7; def fields iy+0x00-iy+0x05
+000022f4	voice_rec_tail_init	callers 0x2b25/0x2b30/0x3654/0x365f/0x4370/0x4376; uses 0xf81d
+0000231e	lfo_mod_step	19 call sites across the four services; tables 0x1400/0x1500, RNG 0xf81d; D feeds the increment in mode 0 and the depth otherwise, so not a plain detune (semantic-review-m1-0231e)
+000023ee	voice_pair_clear	callers 0x258d/0x2bfd/0x401e
+000023f6	note_to_fnum	callers 0x244a/0x247a (channel_note_calc); tables 0x1100/0x1200
+00002420	level_scale16	callers 0x2453/0x246b; ld hl,a<<4
+0000242e	voice_rec_load_mixer	callers 0x2afa/0x35fd/0x42b4
+00002461	channel_note_calc	callers 0x2b3d/0x366c/0x4383; calls note_to_fnum/level_scale16
+0000248e	channel_ramp_step	eight call sites in the services; blocks 0x2498-0x24dd
+00002515	ssg_init	called from driver_init 0x1e16; YM writes 0x08/0x09/0x0a=0, 0x07=0 and 0xf905/0xf906 = 0x38
+0000255d	ssg_channel_init	three call sites 0x253d/0x2548/0x2553, one per SSG channel
+00002593	svc_ssg_tick	main-loop call 0x1e46; regs 0x00-0x0a written at 0x2682/0x26f5/0x2827/0x289a etc.
+00002aa8	voice_type0_note_on	table 0x4aa0[0]; calls 0x219b and 0x242e
+00002b02	voice_type0_release	table 0x4ad8[0]
+00002b12	voice_type0_trigger	table 0x4abc[0]; calls 0x2208/0x22f4/0x2461
+00002b43	fm_voice_init	called from driver_init 0x1e19; YM writes 0x21/0x28/0x41-0x4e
+00002bb7	fm_voice_rec_init	four callers 0x2b8b/0x2b96/0x2ba1/0x2bac; (ix+2)=0x01
+00002c03	ym_write_pair	16 call sites inside svc_fm_voices_tick; call c,0x0008 at 0x2c0b
+00002c5f	svc_fm_voices_tick	main-loop call 0x1e49; regs 0xa1/0xa5/0xb1/0xb5 and 0xa2/0xa6/0xb2/0xb6 plus 0x28 at 0x2e6a/0x30a8/0x32e6/0x3524
+00003568	voice_type1_note_on	table 0x4aa0[1]; calls 0x22a8 and 0x242e
+00003605	voice_type1_release	table 0x4ad8[1]
+00003615	voice_type1_trigger	table 0x4abc[1]; YM writes at 0x3626/0x364c
+00003672	op_sub_rec_reset_1	called from 0x4b14 (sequence command 0xd3); stride 0x14/9-byte fields
+000036aa	op_sub_rec_reset_2	called from 0x4b2f (sequence command 0xd4)
+000036e1	op_sub_rec_reset_3	called from 0x4b4a (sequence command 0xd5)
+00003711	op_sub_rec_reset_4	called from 0x4b58 (sequence command 0xd6)
+00003740	adpcm_a_init	called from driver_init 0x1e1c; port 6 regs 0x00/0x01/0x02, port 4 0x1c
+00003783	adpcm_a_rec_init	six call sites 0x375c-0x377f; (ix+2)=0x02, rst 30 via 0x3798
+0000379c	svc_adpcm_a_tick	main-loop call 0x1e4c; port-B regs 0x00/0x08+n/0x10+n/0x18+n/0x20+n/0x28+n, EOS reset 0x37e4, triggers at 0x3800 etc.
+00003f41	voice_type2_note_on	table 0x4aa0[2]; calls 0x219b
+00003f60	adpcm_a_note_row_load	table 0x4ad8[2]; call 0x1fa6 at 0x3f9f
+00003fba	voice_type2_trigger	table 0x4abc[2]; call 0x2208
+00003fca	adpcm_b_init	called from driver_init 0x1e1f; port-A regs 0x1b/0x10/0x11
+00003fe0	adpcm_b_rec_init	called from 0x3fce; (ix+2)=0x03, rst 30 via 0x3ffc
+00004024	svc_adpcm_b_tick	main-loop call 0x1e4f; regs 0x1c/0x1b/0x11-0x15/0x10/0x12/0x13/0x14
+0000427f	voice_type3_note_on	table 0x4aa0[3]; calls 0x219b/0x22a8/0x242e
+000042ca	voice_type3_release	table 0x4ad8[3]
+000042ef	voice_type3_trigger	table 0x4abc[3]; call 0x1fa6 at 0x4331
+00004389	voice_channel_alloc	caller 0x4a30 in voice_note_start; four scan sections 0x46bb/0x480e/0x4424/0x43a9 and the shared tail 0x49ca
+00004a03	voice_note_start	caller 0x577d in seq_run; tables 0x4aa0/0x4abc/0x4ad8, continuations 0x4aa8/0x4ac4/0x4ae0
+00004aa8	voice_note_stage2	pushed continuation from 0x4a8c; table 0x4abc
+00004ae0	voice_note_done	pushed continuation of the 0x4ad8 dispatch; scf; ret
+00004ae2	seq_channel_voice_get	six call sites (0x4a13, 0x4b0b, 0x4b26, 0x4b41, 0x4b4f, 0x535b)
+00004b03	seq_channel_is_fm	callers 0x4b0f/0x4b2a/0x4b45/0x4b53; xor 0x01 on (ix+0x02)
+00004b0b	cmd_seq_key_off_1	caller 0x542b (sequence command 0xd3); calls 0x3672
+00004b26	cmd_seq_key_off_2	caller 0x543f (command 0xd4); calls 0x36aa
+00004b41	cmd_seq_key_off_3	caller 0x5453 (command 0xd5); calls 0x36e1
+00004b4f	cmd_seq_key_off_4	caller 0x5467 (command 0xd6); calls 0x3711
+00004b5d	voice_def_resolve	caller 0x4a03; banked table 0x0080, call 0x1fa6 at 0x4b7b
+00004c84	seq_channels_stop_all	callers 0x1e22 (init) and 0x215d (command 0x04); 0xfbfc + 0x23*n, 14 entries
+00004ca6	svc_seq_channels_tick	main-loop call 0x1e55; 14 call sites of channel_slide_tick, fade maths at 0x4d40-0x4d74, ADPCM-B part from 0x4d77
+00004f39	adpcm_b_env_set	caller 0x5517 (sequence command 0xcd)
+00004f40	adpcm_b_env_step	caller 0x4dce in svc_seq_channels_tick; writes 0x1b at 0x4f60
+00004f69	curve_mul	callers 0x4f50/0x4f62 and 0x2178 (sub-command 0x08 level scaling)
+00004f88	fade_step_set	callers 0x20d7/0x2105/0x541a; table 0x4f92, 0xf806 write at 0x4f9f
+00005025	aux_owners_reset_all	called from driver_init 0x1e25; 0xfdf2 + 0x23*n, 8 entries: +9 = 0x08, +2 (priority) = 0xff, +3/+0/+1/+0x0a/+0x0b = 0; drum role unproven (semantic-review-m1-03c72)
+000050db	aux_owner_alloc	caller 0x50b9 in the start-record walker 0x507b; D = tag, E = priority; takes a free owner, stops a same-tag owner started by an earlier command (serial +0x07/+0x08 vs 0xf819) when its priority >= E, else picks the playing owner with the highest priority >= E; 0xff0a = choice, H = result (semantic-review-m1-0504e)
+0000514f	svc_aux_owners_tick	main-loop call 0x1e52; 0xfdf2 + 0x23*n, 8 entries unrolled: flags &= 0xf7 always, if bit 2 then 0x52ea (bit 6) and seq_run 0x532b; no drum/ADPCM-A selection (semantic-review-m1-0504e)
+00005251	seq_owner_start	generic sequence owner start: callers 0x4ff3 (music owners from 0x4fa3) and 0x50c3 (0xfdf2 owners from the start-record walker); call 0x1fa6 at 0x525b, flag write at 0x52cf (semantic-review-m1-0504e)
+000052ea	channel_slide_tick	called for every channel whose flags bit 6 is set (22 call sites); table page 0x1a00
+0000532b	seq_run	main-loop reachable through the two channel services; table 0x53a3 (26 x jp stubs) and the note path at 0x56ea
+000053a3	seq_cmd_stubs	jump stubs for sequence bytes 0xc0..0xd9: seq_run_fetch 0x5362 executes 0x53a3+3*(byte-0xc0) by jp (hl) at 0x53a2 (was data row m1_cmd_jump_table)
+000053f1	cmd_seq_fade_out	dead stub jp 0x540f in the slot after the 26 c0..d9 stubs: seq_run_fetch sends bytes >= 0xda to 0x578d, so it is never indexed; no address word names it (kind dead-insn)
+000053f4	cmd_seq_d9	jump table53a3[25]; masked payload and alternating ff0c lowbit to68k reply port0c, not YM output
+00005420	cmd_seq_d3	jump table 0x53a3[0x13]; call 0x4b0b
+00005434	cmd_seq_d4	jump table 0x53a3[0x14]; call 0x4b26
+00005448	cmd_seq_d5	jump table 0x53a3[0x15]; call 0x4b41
+0000545c	cmd_seq_d6	jump table 0x53a3[0x16]; call 0x4b4f
+00005470	cmd_seq_d7	jump table 0x53a3[0x17]; writes iy+0x16
+00005499	cmd_seq_d8	jump table 0x53a3[0x18]; writes the iy+0x02/0x03 pair
+000054c5	cmd_seq_d1	jump table 0x53a3[0x11]
+000054f0	cmd_seq_d2	jump table 0x53a3[0x12]; iy+0x13 write
+000054fc	cmd_seq_ce	jump table 0x53a3[0x0e]
+0000550f	cmd_seq_cd	jump table 0x53a3[0x0d]; call 0x4f39
+0000551d	cmd_seq_cc	jump table 0x53a3[0x0c]
+00005535	cmd_seq_cb	jump table 0x53a3[0x0b]
+00005541	cmd_seq_ca	jump table 0x53a3[0x0a]
+0000555c	cmd_seq_c9	jump table 0x53a3[0x09]
+00005574	cmd_seq_c6	jump table 0x53a3[0x06]; iy+0x0c
+00005582	cmd_seq_c7	jump table 0x53a3[0x07]; iy+0x0d
+00005590	cmd_seq_c8	jump table 0x53a3[0x08]; iy+0x0e
+0000559e	cmd_seq_c5	jump table 0x53a3[0x05]; 6-slot table with stride 0x1c
+000055d4	cmd_seq_cf	jump table 0x53a3[0x0f]; pushes a zero loop counter (free offset +0x22 - 1, cell = 0), stops via 0x578d when the old offset is 0; resets +0x17..+0x1a (semantic-review-m1-0504e)
+00005605	cmd_seq_d0	jump table 0x53a3[0x10]; stride 0x1c record access
+0000565d	cmd_seq_c4	jump table 0x53a3[0x04]; 16-bit operand, end path 0x578d
+0000569a	cmd_seq_c3	jump table 0x53a3[0x03]; set 0,(iy+0x09): bit 0 lets 0x4a03 try reusing the owner's voice record via 0x4ae2; also set by 0x507b, cleared by whole-byte writes (0x5251, 0x578d) (semantic-review-m1-0504e)
+000056b1	cmd_seq_c0	jump table 0x53a3[0x00]; writes the voice-definition selector index +0x0a read by 0x4b5d (semantic-review-m1-0504e)
+000056bd	cmd_seq_c1	jump table 0x53a3[0x01]; writes the voice-definition selector +0x0a index / +0x0b table group (0xff = built-in table 0x2509) read by 0x4b5d (semantic-review-m1-0504e)
+000056ce	cmd_seq_c2	jump table 0x53a3[0x02]; target = pointer past the operand + word; also resets +0x17..+0x1a (semantic-review-m1-0504e)
+00001e3f	main_loop	block; per-frame loop head: frame counter, the five services, the tick wait and the frame hand-off
+00001e5b	main_loop_wait	block; waits for the timer tick semaphore 0xf801
+00001e97	irq_tick_counted	block; tick counter 0xf802 increment and YM status latch
+00001ed4	cmd_queue_empty	block in cmd_queue_pop; queue empty: clear carry and return
+00001f0a	sound_cmd_stop_all	block in sound_cmd_nmi; command 0x01 body: silences SSG, FM and ADPCM-B, resets the stack and replies 0x01
+00001f4b	sound_cmd_restart	block in sound_cmd_nmi; command 0x03 body: resets the stack and pushes 0x0000 as the return address
+00001f68	note_delta_pair_hi	block; second-stage table lookup (page 0x15)
+00001f77	note_delta_pair_carry	block in note_delta_pair; second-stage lookup with the carry path
+00002096	cmd_music	block in cmd_process; music request path (command >= 0x20): song number and the second-level dispatch through 0x20b3
+00002115	cmd_music_hi	block in cmd_process; path taken when the stored sub-command is >= 0x10 (unreachable in this build: only 0x00-0x0e are stored)
+00002126	cmd_music_play	block in cmd_process; plays the requested song: banked record 0x0088 + the song number selects the channel/voice table
+00002247	eg_step_down	block in eg_step; envelope: rate down towards the target
+00002253	eg_step_up	block in eg_step; envelope: rate up towards the target
+0000226c	eg_step_seg2	block in eg_step; envelope: segment 2 (sustain)
+00002274	eg_step_seg2_dec	block in eg_step; envelope: segment 2 decay
+00002284	eg_step_seg2_hold	block in eg_step; envelope: segment 2 hold
+0000228e	eg_step_seg2_next	block in eg_step; envelope: segment 2 advance
+00002357	lfo_step_zero	block in lfo_mod_step; detune: zero-rate path
+0000236c	lfo_step_apply	block in lfo_mod_step; detune: apply the curve step
+0000238e	lfo_step_inv	block in lfo_mod_step; detune: inverted curve
+00002393	lfo_step_alt	block in lfo_mod_step; detune: alternate curve
+00002399	lfo_step_rand	block in lfo_mod_step; detune: random-step path (RNG 0xf81d)
+000023ad	lfo_scale_output	block in lfo_mod_step; detune: store and return the new value
+00002474	channel_note_calc_bend	block in channel_note_calc; note calculation with the bend offset
+00002498	ramp_step_run	block in channel_ramp_step; ramp: step the 16-bit value
+000024a8	ramp_step_decrement	block in channel_ramp_step; delay-expired arm of 0x2498: fraction +3 -= B, value +4/+5 decremented and clamped to 0; mode bits 7/6 of +6 return target-value (00), value-target (01), value (10), 0-value (11); nothing is restarted (semantic-review-m1-0231e)
+000024d2	ramp_step_neg	block in channel_ramp_step; ramp: negative-direction result
+000024dc	ramp_step_zero	block in channel_ramp_step; ramp: zero result
+0000261e	svc_ssg_ch1_write	block in svc_ssg_tick; SSG channel 1 tone period/volume writes
+00002686	svc_ssg_ch1_tail	block in svc_ssg_tick; SSG channel 1 envelope tail
+00002723	svc_ssg_ch2_head	block in svc_ssg_tick; SSG channel 2 header stage
+000027c3	svc_ssg_ch2_write	block in svc_ssg_tick; SSG channel 2 tone period/volume writes
+0000282b	svc_ssg_ch2_tail	block in svc_ssg_tick; SSG channel 2 envelope tail
+000028c8	svc_ssg_ch3_head	block in svc_ssg_tick; SSG channel 3 header stage
+00002968	svc_ssg_ch3_write	block in svc_ssg_tick; SSG channel 3 tone period/volume writes
+000029d0	svc_ssg_ch3_tail	block in svc_ssg_tick; SSG channel 3 envelope tail
+00002a6d	svc_ssg_tail	block in svc_ssg_tick; SSG service tail
+00002b83	fm_voice_init_tail	block in fm_voice_init; FM voice init: last record
+00002cf4	svc_fm_voices_v1_load	block in svc_fm_voices_tick; FM voice 1: level byte load
+00002cf7	svc_fm_voices_v1_prep	block in svc_fm_voices_tick; FM voice 1: parameter prep
+00002d05	svc_fm_voices_v1_write	block in svc_fm_voices_tick; FM voice 1: pitch/envelope stage and register writes (F-Number, block, feedback/algorithm, L/R)
+00002e98	svc_fm_voices_v2_prio	block in svc_fm_voices_tick; FM voice 2: key-state and priority stage
+00002f32	svc_fm_voices_v2_load	block in svc_fm_voices_tick; FM voice 2: level byte load
+00002f35	svc_fm_voices_v2_prep	block in svc_fm_voices_tick; FM voice 2: parameter prep
+00002f43	svc_fm_voices_v2_write	block in svc_fm_voices_tick; FM voice 2 register writes
+000030d6	svc_fm_voices_v3_prio	legacy name: complete voice2 deferred-keyoff handoff then voice3 owner/pitch service; no priority arbitration; pitch shadow at f9e3, upper-bank FM destination via3173
+00003170	svc_fm_voices_v3_load	legacy name: block8 folds to block7 with doubled F-number; no level-byte load; fall-through3173
+00003173	svc_fm_voices_v3_prep	block in svc_fm_voices_tick; FM voice 3: parameter prep
+00003181	svc_fm_voices_v3_write	block in svc_fm_voices_tick; FM voice 3 register writes (through the second YM port pair)
+00003314	svc_fm_voices_v4_prio	block in svc_fm_voices_tick; FM voice 4: key-state and priority stage
+000033ae	svc_fm_voices_v4_load	block in svc_fm_voices_tick; FM voice 4: level byte load
+000033b1	svc_fm_voices_v4_prep	block in svc_fm_voices_tick; FM voice 4: parameter prep
+000033bf	svc_fm_voices_v4_write	block in svc_fm_voices_tick; FM voice 4 register writes
+00003552	svc_fm_voices_tail	block in svc_fm_voices_tick; FM voice service tail
+000035c5	voice_type1_note_on_tail	block in voice_type1_note_on; voice type 1 note-on tail
+000037c9	svc_adpcm_a_ch1_start	block in svc_adpcm_a_tick; ADPCM-A channel 1: level, sample addresses, EOS reset, key-on
+00003885	svc_adpcm_a_ch1_key	block in svc_adpcm_a_tick; ADPCM-A channel 1 key state
+00003895	svc_adpcm_a_ch1_eos	block in svc_adpcm_a_tick; ADPCM-A channel 1 end-of-sample check
+000038a0	svc_adpcm_a_ch1_off	block in svc_adpcm_a_tick; ADPCM-A channel 1 stop path
+000038cd	svc_adpcm_a_ch2_head	block in svc_adpcm_a_tick; ADPCM-A channel 2 header stage
+0000390f	svc_adpcm_a_ch2_start	block in svc_adpcm_a_tick; ADPCM-A channel 2 start
+000039cb	svc_adpcm_a_ch2_gain_test	block in svc_adpcm_a_tick; ADPCM-A voice 2 gain test: EX AF,AF' Z skips to the timers, 0x39cf is the forced (pan changed) entry; A = ROM[0x1900+gain]-1, a zero byte writes reg 0x09 = 0 (L/R off); no key state (semantic-review-m1-0231e)
+000039db	svc_adpcm_a_ch2_lr_level_write	block in svc_adpcm_a_tick; ADPCM-A voice 2 L/R+level write: RRC E twice moves pan bits 0/1 to 7/6, ORs the level, writes reg 0x09 (RST 8); no end-of-sample test (semantic-review-m1-0231e)
+000039e6	svc_adpcm_a_ch2_timers	block in svc_adpcm_a_tick; ADPCM-A voice 2 timers: C = 1 or tick_due 0xf809 (owner +0x09 bit 1), age +6 += C, gate +5 counts down; expiry latches +3 bit 4 or releases via 0x3a22; no YM write, no stop path (semantic-review-m1-0231e)
+00003a13	svc_adpcm_a_ch3_head	block in svc_adpcm_a_tick; starts with voice 2's deferred release (+0x0f immediate-release entry 0x3a22), then the voice 3 head (state 0 timers, 2 start, else status 0xf80a bit) (semantic-review-m1-0231e)
+00003a55	svc_adpcm_a_ch3_start	block in svc_adpcm_a_tick; ADPCM-A channel 3 start
+00003b11	svc_adpcm_a_ch3_gain_test	block in svc_adpcm_a_tick; ADPCM-A voice 3 gain test, same code as 0x39cb (forced entry 0x3b15, curve 0x1900); no key state (semantic-review-m1-0231e)
+00003b21	svc_adpcm_a_ch3_lr_level_write	block in svc_adpcm_a_tick; ADPCM-A voice 3 L/R+level write to reg 0x0a, same code as 0x39db; no end-of-sample test (semantic-review-m1-0231e)
+00003b2c	svc_adpcm_a_ch3_timers	block in svc_adpcm_a_tick; ADPCM-A voice 3 timers, same code as 0x39e6 (release entry 0x3b68); no stop path (semantic-review-m1-0231e)
+00003b59	svc_adpcm_a_ch4_head	block in svc_adpcm_a_tick; starts with voice 3's deferred release (immediate-release entry 0x3b68), then the voice 4 head (semantic-review-m1-0231e)
+00003b9b	svc_adpcm_a_ch4_start	block in svc_adpcm_a_tick; ADPCM-A channel 4 start
+00003c57	svc_adpcm_a_ch4_gain_test	block in svc_adpcm_a_tick; ADPCM-A voice 4 gain test, same code as 0x39cb (forced entry 0x3c5b, curve 0x1900); no key state (semantic-review-m1-0231e)
+00003c67	svc_adpcm_a_ch4_lr_level_write	block in svc_adpcm_a_tick; ADPCM-A voice 4 L/R+level write to reg 0x0b, same code as 0x39db; no end-of-sample test (semantic-review-m1-0231e)
+00003c72	svc_adpcm_a_ch4_timers	block in svc_adpcm_a_tick; ADPCM-A voice 4 timers, same code as 0x39e6 (gate expiry releases via 0x3cae); no YM write, no stop path (semantic-review-m1-03c72)
+00003c9f	svc_adpcm_a_ch5_head	block in svc_adpcm_a_tick; starts with voice 4's deferred release (owner bit 4 clear and voice +3 bit 4 set -> release envelope +0x1b via 0x2219; 0x3cae immediate-release entry), then the voice 5 head at 0x3cb4 (IX = 0xfb49, state dispatch) (semantic-review-m1-03c72)
+00003ce1	svc_adpcm_a_ch5_start	block in svc_adpcm_a_tick; ADPCM-A channel 5 start
+00003d9d	svc_adpcm_a_ch5_gain_test	block in svc_adpcm_a_tick; ADPCM-A voice 5 gain test: Z skips the write, 0x3da1 is the forced (pan changed) entry, A = ROM[0x1900+gain]-1; no key state (semantic-review-m1-03c72)
+00003dad	svc_adpcm_a_ch5_lr_level_write	block in svc_adpcm_a_tick; ADPCM-A voice 5 L/R+level write: pan bits 0/1 rotated to 7/6, ORed into the level, reg 0x0c; no end-of-sample test (semantic-review-m1-03c72)
+00003db8	svc_adpcm_a_ch5_timers	block in svc_adpcm_a_tick; ADPCM-A voice 5 timers (age +6, gate +5), same code as 0x3c72; no stop path (semantic-review-m1-03c72)
+00003de5	svc_adpcm_a_ch6_head	block in svc_adpcm_a_tick; starts with voice 5's deferred release, then the voice 6 head (state dispatch: 0 timers, 2 startup, else status 0xf80a bit) (semantic-review-m1-03c72)
+00003e27	svc_adpcm_a_ch6_start	block in svc_adpcm_a_tick; ADPCM-A channel 6 start
+00003ee3	svc_adpcm_a_ch6_gain_test	block in svc_adpcm_a_tick; ADPCM-A voice 6 gain test, same code as 0x3d9d; no key state (semantic-review-m1-03c72)
+00003ef3	svc_adpcm_a_ch6_lr_level_write	block in svc_adpcm_a_tick; ADPCM-A voice 6 L/R+level write to reg 0x0d; no end-of-sample test (semantic-review-m1-03c72)
+00003efe	svc_adpcm_a_ch6_timers	block in svc_adpcm_a_tick; ADPCM-A voice 6 timers (age +6, gate +5), same code as 0x3c72; no stop path (semantic-review-m1-03c72)
+00003f2b	svc_adpcm_a_tail	block in svc_adpcm_a_tick; ADPCM-A service tail
+00004054	svc_adpcm_b_key_head	block in svc_adpcm_b_tick; ADPCM-B key-state head
+00004069	svc_adpcm_b_key	block in svc_adpcm_b_tick; ADPCM-B key state stage
+00004083	svc_adpcm_b_off	block in svc_adpcm_b_tick; ADPCM-B stop path
+0000409e	svc_adpcm_b_start	block in svc_adpcm_b_tick; ADPCM-B start: sample addresses, EOS reset, key-on
+000040b9	svc_adpcm_b_addr_writes	block in svc_adpcm_b_tick; ADPCM-B start/stop address register writes
+000040fa	svc_adpcm_b_delta	block in svc_adpcm_b_tick; ADPCM-B Delta-N (pitch) table lookup
+0000410a	svc_adpcm_b_pan_pitch	block in svc_adpcm_b_tick; ADPCM-B level/envelope stage
+0000418a	svc_adpcm_b_env_head	block in svc_adpcm_b_tick; ADPCM-B envelope head
+00004193	svc_adpcm_b_env_calc	block in svc_adpcm_b_tick; ADPCM-B envelope value calculation
+0000419c	svc_adpcm_b_env_write	block in svc_adpcm_b_tick; ADPCM-B envelope register writes
+0000423c	svc_adpcm_b_release	block in svc_adpcm_b_tick; ADPCM-B release path
+00004269	svc_adpcm_b_tail	block in svc_adpcm_b_tick; ADPCM-B service tail
+0000432b	adpcm_b_entry_header_load	block in voice_type3_trigger; voice type 3 trigger: register writes
+000043a9	alloc_adpcm_b_head	block in voice_channel_alloc; adpcm_b scan: voice class entry and first record
+000043db	alloc_adpcm_b_prio	block in voice_channel_alloc; adpcm_b scan: key-state and priority test
+000043e8	alloc_adpcm_b_tie	block; adpcm_b scan: tie-break
+00004415	alloc_adpcm_b_take	block in voice_channel_alloc; adpcm_b scan: take the record
+00004421	alloc_adpcm_b_done	block in voice_channel_alloc; ADPCM-B scan: no record taken
+00004424	alloc_adpcm_a_head	block in voice_channel_alloc; adpcm_a scan: voice class entry and first record
+00004456	alloc_adpcm_a_prio	block in voice_channel_alloc; adpcm_a scan: key-state and priority test
+00004489	alloc_adpcm_a_tie	block in voice_channel_alloc; adpcm_a scan: tie-break
+00004490	alloc_adpcm_a_take	block in voice_channel_alloc; adpcm_a scan: take the record
+0000449c	alloc_adpcm_a_ch2_scan	block in voice_channel_alloc; adpcm_a record 2: scan stage
+000044c2	alloc_adpcm_a_ch2_prio	block in voice_channel_alloc; adpcm_a record 2: prio stage
+000044f5	alloc_adpcm_a_ch2_tie	block in voice_channel_alloc; adpcm_a record 2: tie stage
+000044fc	alloc_adpcm_a_ch2_take	block in voice_channel_alloc; adpcm_a record 2: take stage
+00004508	alloc_adpcm_a_ch3_scan	block in voice_channel_alloc; adpcm_a record 3: scan stage
+0000452e	alloc_adpcm_a_ch3_prio	block in voice_channel_alloc; adpcm_a record 3: prio stage
+00004561	alloc_adpcm_a_ch3_tie	block in voice_channel_alloc; adpcm_a record 3: tie stage
+00004568	alloc_adpcm_a_ch3_take	block in voice_channel_alloc; adpcm_a record 3: take stage
+00004574	alloc_adpcm_a_ch4_scan	block in voice_channel_alloc; adpcm_a record 4: scan stage
+0000459a	alloc_adpcm_a_ch4_prio	block in voice_channel_alloc; adpcm_a record 4: prio stage
+000045cd	alloc_adpcm_a_ch4_tie	block in voice_channel_alloc; adpcm_a record 4: tie stage
+000045d4	alloc_adpcm_a_ch4_take	block in voice_channel_alloc; adpcm_a record 4: take stage
+000045e0	alloc_adpcm_a_ch5_scan	block in voice_channel_alloc; adpcm_a record 5: scan stage
+00004606	alloc_adpcm_a_ch5_prio	block in voice_channel_alloc; adpcm_a record 5: prio stage
+00004639	alloc_adpcm_a_ch5_tie	block in voice_channel_alloc; adpcm_a record 5: tie stage
+00004640	alloc_adpcm_a_ch5_take	block in voice_channel_alloc; adpcm_a record 5: take stage
+0000464c	alloc_adpcm_a_ch6_scan	block in voice_channel_alloc; adpcm_a record 6: scan stage
+00004672	alloc_adpcm_a_ch6_prio	block in voice_channel_alloc; adpcm_a record 6: prio stage
+000046a5	alloc_adpcm_a_ch6_tie	block in voice_channel_alloc; adpcm_a record 6: tie stage
+000046ac	alloc_adpcm_a_ch6_take	block in voice_channel_alloc; adpcm_a record 6: take stage
+000046b8	alloc_adpcm_a_ch7_head	block in voice_channel_alloc; ADPCM-A record 7 head (past the group)
+000046bb	alloc_ssg_head	block in voice_channel_alloc; ssg scan: voice class entry and first record
+000046ed	alloc_ssg_prio	block in voice_channel_alloc; ssg scan: key-state and priority test
+00004720	alloc_ssg_tie	block in voice_channel_alloc; ssg scan: tie-break
+00004727	alloc_ssg_take	block in voice_channel_alloc; ssg scan: take the record
+00004733	alloc_ssg_ch2_scan	block in voice_channel_alloc; ssg record 2: scan stage
+00004759	alloc_ssg_ch2_prio	block in voice_channel_alloc; ssg record 2: prio stage
+0000478c	alloc_ssg_ch2_tie	block in voice_channel_alloc; ssg record 2: tie stage
+00004793	alloc_ssg_ch2_take	block in voice_channel_alloc; ssg record 2: take stage
+0000479f	alloc_ssg_ch3_scan	block in voice_channel_alloc; ssg record 3: scan stage
+000047c5	alloc_ssg_ch3_prio	block in voice_channel_alloc; ssg record 3: prio stage
+000047f8	alloc_ssg_ch3_tie	block in voice_channel_alloc; ssg record 3: tie stage
+000047ff	alloc_ssg_ch3_take	block in voice_channel_alloc; ssg record 3: take stage
+0000480b	alloc_ssg_ch4_head	block in voice_channel_alloc; SSG record 4 head (past the group)
+0000480e	alloc_fm_head	block in voice_channel_alloc; fm scan: voice class entry and first record
+00004840	alloc_fm_prio	block in voice_channel_alloc; fm scan: key-state and priority test
+00004873	alloc_fm_tie	block in voice_channel_alloc; fm scan: tie-break
+0000487a	alloc_fm_take	block in voice_channel_alloc; fm scan: take the record
+00004886	alloc_fm_ch2_scan	block in voice_channel_alloc; fm record 2: scan stage
+000048ac	alloc_fm_ch2_prio	block in voice_channel_alloc; fm record 2: prio stage
+000048df	alloc_fm_ch2_tie	block in voice_channel_alloc; fm record 2: tie stage
+000048e6	alloc_fm_ch2_take	block in voice_channel_alloc; fm record 2: take stage
+000048f2	alloc_fm_ch3_scan	block in voice_channel_alloc; fm record 3: scan stage
+00004918	alloc_fm_ch3_prio	block in voice_channel_alloc; fm record 3: prio stage
+0000494b	alloc_fm_ch3_tie	block in voice_channel_alloc; fm record 3: tie stage
+00004952	alloc_fm_ch3_take	block in voice_channel_alloc; fm record 3: take stage
+0000495e	alloc_fm_ch4_scan	block in voice_channel_alloc; fm record 4: scan stage
+00004984	alloc_fm_ch4_prio	block in voice_channel_alloc; fm record 4: prio stage
+000049b7	alloc_fm_ch4_tie	block in voice_channel_alloc; fm record 4: tie stage
+000049be	alloc_fm_ch4_take	block in voice_channel_alloc; fm record 4: take stage
+000049ca	alloc_done	block in voice_channel_alloc; shared tail: stores the chosen record in IX with the voice class in D and returns
+00004a26	note_start_reuse	block in voice_note_start; note start: same voice already playing - reuse path
+00004a30	note_start_alloc	block in voice_note_start; note start: allocate a voice channel
+00004a34	note_start_copy	block; note start: copy the note parameters into the voice record
+00004ac4	note_start_release_dispatch	block in voice_note_start; note start: release dispatch through table 0x4ad8
+00004b01	seq_channel_voice_get_zero	block in seq_channel_voice_get; no voice record: return with carry clear
+00004b19	cmd_seq_key_off_1_ret	block in cmd_seq_key_off_1; operator 1 single-voice path
+00004b34	cmd_seq_key_off_2_ret	block in cmd_seq_key_off_2; operator 2 single-voice path
+00004b72	voice_def_table	block in voice_def_resolve; fixed voice-definition record table lookup
+00004d5e	fade_clamp_hi	block in svc_seq_channels_tick; master fade: clamp to full volume
+00004d65	fade_down	block in svc_seq_channels_tick; master fade: fade-out arithmetic
+00004d87	fade_up_step	block in svc_seq_channels_tick; master fade: fade-in step
+00004d94	fade_down_step	block in svc_seq_channels_tick; master fade: fade-out step
+00004da5	fade_write	block in svc_seq_channels_tick; master fade: store the new level and clear the tick flag
+00004dc9	adpcm_b_env_head	block in svc_seq_channels_tick; ADPCM-B sequence channel: envelope head
+00004ddd	adpcm_b_env_up	block in svc_seq_channels_tick; ADPCM-B sequence channel: envelope up step
+00004dea	adpcm_b_env_down	block in svc_seq_channels_tick; ADPCM-B sequence channel: envelope down step
+00004dfb	adpcm_b_env_write	block in svc_seq_channels_tick; ADPCM-B sequence channel: envelope store
+00004e1f	seq_tempo_tick_run	block in svc_seq_channels_tick; ADPCM-B sequence channel: sequence run and note start (13 copies, one per music channel voice pointer)
+00004f4c	adpcm_b_env_step_alt	block in adpcm_b_env_step; ADPCM-B level step without the full reference
+00004f5b	play_song_level	block in subcmd_play_queued; queued-song start: level scaling from the record
+00004f7d	curve_mul_lo	block in curve_mul; curve multiply: low half
+00004f82	curve_mul_hi	block; curve multiply: high half
+00004f92	fade_step_table	block in fade_step_set; fade step from the rate table
+00004fa3	song_list_start	block in cmd_play_song; song-list initializer: shared tempo fields from table 0x4b84[index], starts up to 14 music owners at 0xfbfc through 0x5251 and releases the rest; no direct ADPCM-B initialization (source header; semantic-data-m1-seqdata)
+00004fe5	song_list_owner_loop	block in cmd_play_song; song-list loop: per entry calls 0x5251 at 0x4ff3 on the next music owner (0xfbfc stride 0x23), sets flag bit 1 and priority +2 from entry +4; music owners, not drum channels (decode; semantic-review-m1-0504e)
+0000500d	song_list_release_rest	block in cmd_play_song; releases the remaining music owners (flags 0x08, voice pointer 0) for the unused count in B; not drum channels (decode; semantic-review-m1-0504e)
+0000504e	aux_owners_release_banked	block in cmd_sfx_stop_all (jp from 0x2160 command 0x04 and 0x2166 command 0x06); resets the 8 owners at 0xfdf2 except those whose selector group +0x0b is 0xff (semantic-review-m1-0504e)
+0000507b	aux_start_record_run	block in cmd_process; walks a start record (from the 0x2126 high-selector path, or 0x24f7 for command 0x0f): four stop request words to 0x5210, a tag byte, then 5-byte sequence entries {banked ptr, unused, priority} started through 0x50db/0x5251 until three zero bytes (semantic-review-m1-0504e)
+000050da	aux_start_record_end	block in cmd_process; end of the start-record walk, reached only by the jr z at 0x50b2 (three zero bytes) (semantic-review-m1-0504e)
+0000510f	aux_owner_alloc_stop_tag	block in aux_owner_alloc; same tag, different serial, priority >= request: stops the owner (call 0x578d) and takes it as free (semantic-review-m1-0504e)
+0000511b	aux_owner_alloc_prio	block in aux_owner_alloc; other playing owners: ignored once a free owner was found (H = 2), else priority >= C makes it the candidate (semantic-review-m1-0504e)
+00005133	aux_owner_alloc_free	block in aux_owner_alloc; owner not playing: H = 2, 0xff0a = IY; returns at once when D = 0 (only records the choice) (semantic-review-m1-0504e)
+00005141	aux_owner_alloc_next	block in aux_owner_alloc; advance to the next 0xfdf2 owner (semantic-review-m1-0504e)
+0000514a	aux_owner_alloc_done	block in aux_owner_alloc; common exit for all results: IY = (0xff0a), H = result (0 refused, 1 candidate, 2 free) (semantic-review-m1-0504e)
+00005210	aux_owners_stop_request	block in cmd_process; BC = 0 returns; else stops 0xfdf2 owners whose request word +0x05 equals BC and whose serial differs from cmd_serial; callers: the four 0x507b stop words and 0x2115 (song_stop_flag, BC = (0xf81b)) (semantic-review-m1-0504e)
+00005318	channel_slide_neg	block in channel_slide_tick; slide: negative direction
+00005323	channel_slide_clamp	block in channel_slide_tick; slide: clamp at zero
+0000533e	seq_run_continue	block in seq_run; sequence continue: saves the sequence pointer and picks the next byte
+0000534d	seq_run_wait	block in seq_run; wait counter still running: decrement and return
+00005362	seq_run_fetch	block in seq_run; fetch loop: selects the sequence bank, maps the window and reads the command byte
+0000540f	cmd_seq_fade_body	block in cmd_seq_fade_out; fade command body: direction down and rate byte
+000054e2	cmd_seq_d1_end	block in cmd_seq_d1; command 0xd1: end path
+0000556d	cmd_seq_c9_skip	block in cmd_seq_c9; command 0xc9: skip path
+000055a9	cmd_seq_c5_return	block in cmd_seq_c5; return: pops the two-byte return slot at +0x1c+offset into the sequence pointer 0xff0d, offset += 2, resets +0x17..+0x1a; no drum voice (decode; semantic-data-m1-seqdata)
+00005624	cmd_seq_d0_arm	block in cmd_seq_d0; stored count 0: load the operand count (0 = endless, 1 = expire, n = body runs n times) and branch to pointer past the operands + word; first-pass path, not a drum voice (semantic-review-m1-0504e)
+00005648	cmd_seq_d0_end	block in cmd_seq_d0; loop expiry: pops the loop byte without clearing the cell and continues after the operands; not a drum voice (semantic-review-m1-0504e)
+000056a6	cmd_seq_c3_clear	block in cmd_seq_c3; command 0xc3: clear flag bit 0
+000056aa	cmd_seq_c3_store	block; command 0xc3: continue the interpreter
+000056ea	seq_run_note	block in seq_run; note byte path: relative note, duration/level updates
+000056fc	seq_run_duration	block in seq_run; duration byte shared with the tie/rest form
+00005786	seq_run_end_check	block in seq_run; sequence end check
+0000578d	seq_run_end	block; sequence end: releases the channel
+00001fde	m1_hl_word_deref	dead code: hl = (hl) little-endian word, b = 2; follows the 0x1fa6 resolver ret, unreferenced (same bytes unreferenced in the mslug drivers)
+000050d9	aux_start_record_dead_ret	dead code: lone ret after the 0xfdf2 start-record walker's jp 0x50a7; no word d9 50 and no jr lands here; the walker exit lands on 0x50da (semantic-review-m1-0504e)

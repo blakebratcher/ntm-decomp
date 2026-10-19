@@ -1,0 +1,157 @@
+# Lane name-3 names for P1 [0x59cf2, 0x63f00) (understanding pass; labels only).
+# Format: <hex addr>	<name>	<evidence: what it does + the key fact that justifies the name>
+# Three addresses in this range already carry a name in config/names.tsv
+# (0x5a9a2 contest_record_seed, 0x60268 button_edge_check, 0x63b5e
+# screen_hook_install_63b5e); they are repeated here with fuller evidence.
+059cf2	hud_icon_draw_a	draws one fix tile (code $2379) at fix-map $7165 (x 11, y 5) via FUN_0000d7a6, then falls through into hud_pin_distance_draw; returns at once when attract_demo_index $102EBB is nonzero (semantic-review-p1-54c3c)
+059d10	hud_pin_distance_draw	REST pin-distance HUD: pin_distance_calc $59d44 returns ball-to-pin 16.16; integer word stored unshifted at target_distance $10d4aa, then >>2 converts four internal units per yard before bcd_convert. number_draw_4_blank $567c2 writes four digits at $70e5 (attr $2300), label REST tiles $2385.. at $7065; Y unit at column 11.
+059d44	pin_distance_calc	FUN_00057612 (player pos 16.16) minus the pin ($10D4C6/$10D4CA, set by FUN_0005A31C) -> FUN_00059E0E magnitude
+059d5e	hud_icon_draw_b	draws fix tile $1379 at $7166 (col 38 row 5); skipped unless $107082!=0 (shot/turn flag)
+059d74	hud_shot_distance_draw	DRIVE shot-distance HUD: shot_distance_calc $59daa measures ball from shot origin $10d4f0/f4 and divides by four to yards; integer stored at $10d4ac then bcd_convert. number_draw_4_blank $567c2 writes four digits at $70e6 (attr $1300), DRIVE tiles $1389.. at $7066, Y unit column 11 row 6.
+059daa	shot_distance_calc	|player pos - shot origin ($10D4F0/$10D4F4)| in 16.16 via FUN_00059EB2, >>2 (word result used by the HUD and by $5A8D6)
+059dc4	vec2_length_word	16-bit fast magnitude of (d0,d1)-(d2,d3): |dx|/|dy| ordering then divu-based r = a + b^2/(a+...) with $100000=16.0 fixed point; used by $5929A (ground query) and vec2_normalize
+059e0e	vec2_length_16_16	16.16 magnitude of (d0,d1)-(d2,d3) built on div_fixed_unsigned ($2908) and the $40000 ($27F2) scaling; used by vec2_normalize and $958C (roll/pin distance)
+059eb2	vec2_length_16_16_div	16.16 magnitude variant using div_fixed_unsigned + $27F2 + sqrt_newton; the shot-distance path (FUN_00059DAA, FUN_0005A8D6)
+059ef8	vec2_length_16_16_sqrt	exact 16.16 magnitude: dx*dx + dy*dy through $2844 (16.16x16.16 -> 32.32) then sqrt_newton; reached by lea $59ef8,a0 at $bd78 + jsr (a0) at $bd7e
+059f26	round_player_init	hole_number = 1, clears the marker phase $10ebca, writes the player slot numbers 0/1 to byte 0 of $107004/$10702a (the golfer id is +1, set by the callers), calls contest_holes_pick 0x5aa9a (skipped in game_mode 2) and scorecard_clear 0x59f4e ($ff into $107014/$10703a); called by 0xe9e2, 0xed7a, 0xf22e
+059f4e	scorecard_clear	fills the two 18-byte per-hole result arrays $107014 and $10703A with $FF (unplayed)
+059f6a	player_state_save	snapshots the active record (P1 unless its +1 golfer id < 0) to $107050 ($26 bytes) plus hole/course/resume hook ($10d4be/$10d4ba/$102eb4); $102ebf only gates a hole_stock_inc of the hole stock (undoing hole_load's decrement); only caller challenger_join_setup 0xefd2
+059fc6	player_state_restore	restores $107050 into the record picked by BIOS_PLAYER_MOD1 ($10fdb6 == 1 -> P1) when its slot byte 0 matches the snapshot, zeroes all 38 bytes of the other record, sets $107076 and hook $e968; a mismatch skips the copy and the restore; a saved $e8d4 hook restores only hole/course/hook; the other record's +1 = $ff; called from the stroke-final notice hold 0x6c6ce
+05a054	hole_load	a0 = hole data block (22-byte header + RLE): $10707a, tee (5a3a6), both players on the tee with height (5929a), records +2/+$22/+$25/+3 cleared, limits $10d4dc/de = (cells-2)*16-1, tilemap (5a428), wind flag/dir (5a286), pin (5a31c), wind bias (5a210), wind_setup, type-6 list (5926c), y-order check (5a3e4), contest seed (5a9a2), hole stock -1 for both players (5ab82), band (5a19c), type-0 height -> $10d4ce, course object type $5a194[course] -> $10d4c0; the tee height reads the previous hole's pin list and band
+05a19c	hole_band_lookup	looks up the long key (course $10d4b8 << 16 | hole $10d4bc) in the 6-entry {u32 key, u16, u16} table at $5a1dc (lea at $5a1ba points 8 before it) + $ffffffff terminator; keys course/hole 0/2, 0/12, 2/4, 2/17, 3/8, 3/11; stores the map-unit y range into $10d4d2/$10d4d4 ($ffff when absent)
+05a210	wind_bias_set	$107000 = 3 outside a one-player live game (BIOS_USER_MODE != 2, attract demo, or game_mode 2); else ((+4 of the first roster row without +7 bit 3) - (+4 of the first with bit 3, the human row)) / 2 + 2, clamped 0..7 (rows 0x10eda2, walked from $10ed9a with addq #8 first); read by wind_setup 0x56e80/0x56eda as a bias; no weather record
+05a286	wind_random_set	$10d4d6 = wind on/off flag (table $5a306 by (rng&7)+(rng&7)+conditions; 0 on holes 1-3, 1 in attract demos), $10d4d7 = direction 0-7 (third rng draw; 5 in demos); vector (sin, -cos) of dir << 9 (12-bit turns, 45 deg steps) -> $102ca8/$102cac
+05a31c	pin_position_set	RNG + conditions pick an index into the 22-byte pin-number LUT $5a390 (..6,6,7,7), indexing the 8 {u16,u16} pairs at hole record +2 -> pin x/y words $10d4c2/$10d4c4 (map units) and pin_x/y_16_16 = word << 14 (word/4); pin 0 in attract demos (the RNG draws still happen); the type-3 flag object is placed there (0x2e34, 0x7d96)
+05a3a6	tee_position_set	object type 7 of the hole object list -> tee x/y map-unit words $10d4d8/$10d4da (all 72 holes have one)
+05a3ba	hole_object_find	a0 = hole record +6 (the 6-byte object list), then falls through into object_find_by_type: outputs d0/d1 = x/y of type d0, carry = not found
+05a3c4	object_find_by_type	skips the record at a0 (adds 6 before the first test, so the first record, always the type-3 flag object, is never matched), scans 6-byte records for type d0 until a type byte with bit 7 set; hit: d0/d1 = x/y, carry clear; miss: carry set (ori #1,ccr), d0 unchanged
+05a3e4	obstacle_y_order_check	asserts that the +4 (y) words of the type 4/5/$a/$c object records never decrease (signed, from 0): trap #$f otherwise (all 72 holes pass); returns the last y, discarded by hole_load; not a max scan
+05a428	tilemap_rle_decode	expands the hole tilemap RLE at a0 into $1070A2: $FFFF ends; word with bit 15 set = one tile, else tile repeated next-word times (fixdata-validated)
+05a450	atan2_12bit	angle of the unit vector ($10eb9c, $10eba0) in 12-bit turns with (x,y) = (sin a, -cos a): asin of the smaller component by counting the 518 sine thresholds at $5a4ae (cmp.w (a0)+ at 0x5a478/0x5a4a2), folded by octant; caller 0x58274
+05a8ba	match_holes_up	sums the bytes at a0+$10 up to the first negative byte, each 2 counted as -1: match-play holes won - lost (game_mode-2 bytes 1/2 from hole_result_record 0x58bee); no 18 limit; callers 0x6dc84 (current record) and 0x78d44 (P1), both game_mode 2
+05a8d6	contest_record_update	contest-hole record, shot 1 only (+2 == 1), for the hole byte from 0x5aa76: + hole: max of shot_distance_calc on surface 0 (longest drive); - hole: min ball-to-pin ($10d4c2/c4) distance on surface 3, 0 when holed (nearest pin); stores 0x10d4e4/e8/ec; only caller 0x5ae04
+05a97e	contest_record_pin_tail	nearest-pin tail (fall-through after the cmp.l at 0x5a978): bcc keeps the record, so it stores d0 only when smaller than 0x10d4e4
+05aa76	contest_hole_lookup	returns the 0x10d4e0 contest byte whose |value| = hole_number (+ = longest drive, - = nearest pin), else 0; callers hole_load 0x5a144, 0x5a8d6, 0x6cce2, 0x6cff4 (twice), 0x78d0a, 0x7b60c
+05aa9a	contest_holes_pick	per round (round_player_init 0x59f44; skipped in game_mode 2): clears 0x10d4e0 and packs 2-3 of the course's 4 contest holes (0x5ab3e + course*4) selected by one of 4 masks at 0x5ab1e (bytes 4-7 add a 3rd hole with odds (6-cond)/8); not attract-only
+05ab0c	contest_holes_pack4	a1 = course row, a0 = mask: copies the 4 course bytes whose mask byte is nonzero into a2 (the 0x10d4e0 list)
+05ab4e	hole_stock_inc	hole stock +1 (saturating at $7f) of player_status_p1/p2 +$44 ($10d572/$10d5d2), player d0; returns the new value, 0 in an attract demo; callers 0x59f8c (player_state_save, undoing hole_load's -1), 0x6c8c8 (MATCH HOLE winner), 0x6d09c (contest-hole record holder), 0x6d5da (|strokes - par| for an under-par hole, 3 for a hole in one); see 0x10d572; not a shot counter
+05ab82	hole_stock_dec	hole stock -1 (floor 0) of player_status +$44, player d0; skipped for an unset golfer id (+1 < 0) or in an attract demo; callers hole_load 0x5a15c/0x5a162 (every hole), 0x6c8f8 (MATCH HOLE loser), 0x6d5a2 (hole at or over the HOLE PENALTY threshold); never clears
+05abc6	hole_stock_get	reads the hole stock player_status +$44 of player d0 (0 in an attract demo); callers 0x6c8e6, 0x6d58c
+05abec	match_play_standing	game_mode 2 only (else carry clear, d0 untouched): P1 holes won - lost over the 18 bytes at 0x107014; carry = match decided (|standing| > holes left, or the first won/lost hole while the playoff flag 0x10d4ee is set); d2.b = signed standing (0/-1 in the playoff); callers 0xed36, 0x6d6a4, 0x6f86a, 0x6f8d2; no birdie/bogey counting
+05ac64	ball_actor_setup	ball actor setup: spawns other_ball 0x5b510 when game_mode != 0 and 0x68aee outside an attract demo and not for a putt; then states 0x5ad28 (wait for swing_lock bit 7) and 0x5ad44 (driver: hold timer; bit1 -> 0x5addc; 0x68a96; holed 0x107083 -> 0xb6a0; 0x7446; bit0 -> 0x95aa, else 0x76bc then bit1 -> 0x5addc, bit0 -> 0x95aa, else 0x75aa)
+05addc	ball_stopped_state	motion-over state (entered on ball_state_flags bit 1): contest update 0x5a8d6, $8045a command byte 5 when holed, terrain at the clamped cell -> 0x106fd6/0x106fd8 (6 -> relocation search 0x5b3ba, near the tee -> 4), then the idle state 0x5ae8c; 'type 6 in the cup' is unproven
+05ae8c	ball_idle_state	idle state and common tail of the driver: the debug mover 0x5b0f0 runs only with dev_flags bit 0 (never set in retail), then ball_publish_state 0x5aea0
+05aea0	ball_publish_state	per-frame publish: clamped cell pos (0x5b1a0 on a copy) -> record +4/+8, z -> +$c, camera scroll step 0x10d4a2/a4/a6 (camera_clamp_b; 0 for putts), screen pos 0x10d4f8/fa, 0x10d504-50c; z derived only with bit 1 set and not holed; draws unless holed or hidden by the band test 0x5aff0
+05aff0	ball_band_hide_check	carry (the caller skips the draw) when record y lies in [0x10d4d2 unsigned, 0x10d4d4 signed], the height word is negative and y - z offset > 0x10d4d4
+05b030	ball_draw	palette/frame overrides: on the ground (ball_state_flags bit 0 rolling / bit 1 motion over, or d1 = 1) surface 2 -> frame 0x8c680, 6 -> 0x8c68a, 7 -> not drawn; putt (shot_kind < 0) -> 0x8cd9e; draws through 0xf2e unless 0x5b0b8 returns carry
+05b0b8	putt_view_clip_check	carry (= hide) only during a putt (shot_kind bit 7 set) with x +$30 > $d8 and $138 < y +$32 < $1da; callers hide/release the sprite
+05b0f0	ball_debug_mover	debug ball mover (dev_flags bit 0 only): the C edge toggles ball_state_flags bit 1 (motion over) and the state 0x5addc/0x5ae8c; the d-pad (bits 0/1 = y, 2/3 = x) moves ball_x/y by $c000 (0.75), or $200 while C is held
+05b1a0	ball_clamp_bounds	clamps the integer words of d3/d4 (a copy of the ball pos << 2, fraction kept) to [$20, 0x10d4dc] x [$20, 0x10d4de] and sets ball_state_flags bit 1 (motion over) on a clamp; callers 0x5aebe (publishes the clamped pos), 0x5ae46; ball_x/y untouched, no penalty
+05b202	ball_z_screen_offset	record +$c high word (int(64*z)), then falls through into mul3_div64: d0 = word*3 >> 6; clobbers d1/a0
+05b20c	mul3_div64	d0 = (d0*3) >> 6 (word, asr; clobbers d1): callers 0x5935a, 0x5b94c, 0x5b98e scale the 0x5929a ground-height sample into a y offset, 0x7d78 scales int(64*ball_z); no ball-sprite caller
+05b28c	ball_relocate_slide	relocation slide: moves the ball 2.0 units per frame toward the target ($42,$46) set by 0x5b3ba while ball_relocate_busy 0x10d512 is set (shot_result_task 0x6c190/0x6c32a), finishing when the angle's quadrant flips (target passed); no hole transition
+05b3a6	ball_angle_from_ref	atan2 of (ball pos 0x57602 - ($42,$46)(a6)) via $2c48; ($42,$46) is the relocation target in the only caller 0x5b28c
+05b3ba	ball_relocate_search	relocation search: starts at the shot origin $10d4f0/f4 (ball_lie_copy 5/7/8 by 0x6d6fa) or at the ball, steps y + 1 until the terrain is surface 0/1/2, then +4 into ($42,$46) for the slide 0x5b28c; entered for surface 6 by 0x5addc and spawned as an actor by shot_result_task (lea at 0x6c184/0x6c31e) when round_gate_a carries
+05b43a	ball_screen_pos_adjust	adjusts the ball actor's initial screen x/y (only caller bsr at 0x5ad1e): edge margins from hole_tilemap_desc +$a/+$c; putt (shot_kind < 0): x = $78 - (obj0.x - ball.x), y = $188 + (obj0.y - ball.y), -$c when record +$c is nonzero; child +$14 = $c when the 0x5929a height at object 0 is nonzero
+05b60c	actor_shift_draw_state	camera_shift_actor 0x59218 then actor_draw_alt (same code as 0x4978); only installer 0x5b606
+05b618	ball_palette_alloc	palette_slot_alloc banks $1d then $18 (appended to the actor's palette list +$22/+$24, unless already held); callers jsr at 0x5acac and 0x5b5b2
+05b66c	actor_shift_script_state	camera_shift_actor 0x59218 then tail-jump to script_interp 0x68618
+05b67e	score_call_actor	score call (spawned via lea ($5b67e,PC),a1 at 0x5ae20): d0 = shot number - par (0x6e428) picks 1 of the 4 records at 0x5b71a (<= -2 / -1 / 0 / >= 1); queues the first sound-command pair via 0x804de, keeps +$2c = the second pair, waits $b4 frames (0x5b6c8)
+05b6c8	score_call_wait	counts +$14 down; then, unless game_mode == 2 or hole 18, waits at 0x5b6f0 until round_end_flag 0x10d511 is nonzero; queues the second sound pair (+$2c) and releases
+05b93a	ball_tile_is_90	returns d0 = the tile code at the ball (y projected by the 0x5929a height through 0x5b20c, map query 0x59312, & $1fff) and C = (tile == $90); 'out of bounds' is unproven ($90 classifies as surface 6); the 0x70ffa caller uses C to pick a path/sound
+05b974	terrain_type_at_pos	16.16 -> map word position (lsl.l #2 + swap, 16 per tile), then tail-jumps into terrain_type_query; returns the surface type; callers 0x9408, 0x68ac8
+05b980	terrain_type_query	(x,y) map word position (16 per tile) -> surface type in {0,1,2,3,5,6,7,8,$b} (never 4): y -= (h*3)>>6 (h = 0x5929a sample), column-major tile lookup in 0x1070a2, tile & $1fff classified by ranges, 16x16 bit shapes 0x5b73a (orientation table 0x5ba6a), byte shapes 0x5bc98/0x5dc98/0x5fc98 (rotation table 0x5bc32) and the result table 0x5bae2
+05bc42	terrain_shape_rotate	the three rotation bodies of the 0x5bc32 table (90/180/270 degrees: (y,15-x), (15-x,15-y), (15-y,x)); entry 0 is the shared tail 0x5bc66; the byte-shape index x + y*16 + (tile&$f)*$100 + bit4*$1000 then goes through the 0x5bae2 result table
+060198	input_sampler_reset	clears the edge/state latches $10D514/$10D51F and calls the sampler FUN_00085086 with d0=-1
+060200	input_sampler_merge	merges the sampled pad bits: $10D514/15/16 | $10D51F/20/21 -> $10D52A/B/C and the BIOS pad byte $10FD96|$10FD9C -> $10D52D, gated by the coin state $10FDB7
+0603c0	credit_screen_state	"insert coin / press start" state: $102E55 gives a 6-bit timer, walks $10FDB6/7 (coin states) and draws the credit texts $60274/$60281/$602D6/$602E7 via FUN_0000D828
+060440	credit_text_thunk	4-byte bra.w thunk to FUN_00060488, used as a jump-table entry from FUN_000603C0
+060444	credit_prompt_draw_a	draws the credit/start prompt text ($7062/$70C2 via FUN_0000D828) and sets the a6+$14 state byte to 2
+060488	credit_prompt_draw_b	draws the prompt stream $602F7 to $7062 and sets the a6+$14 state byte to 1
+061304	hole_screen_build	hole-screen constructor: clears the scratch block $10EB78.., sets $10D83A, then calls the ~26 sub-builders in order, tagging progress in $10EB92 ($7701..$7719) and poking the watchdog $300001; spawns the actors $63F86/$6367E
+061620	tee_waterfall_sound	FUN_0006181E gate then (course<<8|hole byte $10D4BD) lookup in the list at $61522, drawing text $104E via FUN_000804DE
+061652	hole_map_flag_draw	Six-key cliff-hole lookup in $614da (+$a): course 0 holes 2/12, course 2 holes 4/17, course 3 holes 8/11. Prints through $6169c, loads palettes via $b9bde and installs wipe hook $10eb8e=$63988. Screenshots show cliffs at all six and waterfalls at the first three waterfall keys (0/2, 0/12, 2/4); whether this cell list or the backdrop supplies the cliff pixels is not isolated.
+06169c	hole_map_record_draw	walks {u16,u16,s8,s8,u32} records at a1 and calls the fix blit FUN_000628DC for each row
+0616ca	hole_map_bar_width	d1 = ($1A8 - d0)/2, then 16.16 $606F0[d1*8] >> 7 (a bar/scale width)
+0616e8	hole_record_flag1_check	carry SET when bit 1 of the current hole record's first byte is set (btst #1,(a0) at 0x616f2, bne $61702, ori #1,ccr), clear otherwise; a0/d0 preserved; callers $61708, $62830, $65a06, $65aaa (semantic-review-p1-61620)
+061708	hole_map_scale_bar_draw	draws the distance scale on the fix rows $10D996 from the banked strips $2391B8 plus the marker cells $10E956/58/5A and the FUN_000620AE/FUN_000620D6 bar tests
+06181e	tee_proximity_check	d7 = 0/1/2: ball within $12 x and $E y of the tee $10D4D8/DA (2 when the hole record flag bit 0 is set); 8 callers
+061864	tee_pad_draw	draws the tee marker from the banked strips $245328/$245528 via FUN_000628D2/FUN_000628DC and the tee object
+0618b8	tee_marker_flag_draw	object type 7: skips when bit 4 of (a0)+1 is set, else draws the 3-word stream $618D6 via FUN_000B9BDE
+0618dc	pin_marker_set	object type 2 within $4A of the ball: picks the marker stream table ($61A3A/$61A2A/$61A1A/$61A0A by the FUN_0006229A result), stores it in $10EB8A
+061956	pin_marker_draw	draws the pin marker line: 8 rows of 8 tiles at the marker position $10D836/38 from the table chosen by FUN_000618DC, via FUN_00061A9A + FUN_000628DC/FUN_000628D2
+061a9a	hole_marker_list_add	appends {ptr, x, y} (12-byte record) to the marker list $10E95C, count $10EB7C, saturating at $2D entries
+061ade	lspc_mode_set	$102EAC = 4 when the cup position is valid, else the {6,5,4,3} table at $61B12 indexed by min(wind $106FE0,$C)>>2 (the value written to REG_LSPCMODE by the IRQ handler)
+061b16	distance_marker_scan	walks the marker list at hole record +$A, prunes by the ball y ($10EBA0) and stores the bracket in $10D5F4/F6 + index $10D5F3
+061c08	distance_marker_begin	rejects (course<<8|hole) == $C/$303, resets the bracket $10D5F4/F6 and seeds $10D5F8=$6F, $10D5FA=$63
+061c60	distance_marker_bisect	halves the marker bracket around the ball y (sign of $10EBA0 selects the comparison)
+061c94	distance_marker_swap_pair	swaps a1/a2 through FUN_00061CA6
+061ca6	distance_marker_prune	drops a marker pointer when it is more than $500 (or $920 on the green) from the ball y
+061ce0	distance_marker_range	turns the bracket into the marker index/position $10D5F4/F6 via div_fixed_signed + FUN_00063516, clamped $10..$6F
+061da8	distance_marker_sprite_set	picks the 3-word sprite stream ($61DDE/$61DE4/$61DEA/$61DF0) by the marker distance $10D5F8 thresholds $5D/$55/$4D and blits it via FUN_000B9CB6
+061df6	hole_map_scale_blit	blits 4 rows of 8 tiles from the banked block $23BE60 into the sprite map $10E176 (sprite_map_blit)
+061e34	far_extent_extrapolate	projects the pin ($10D4C2/C4 and the current marker $10D972/974) onto the view: angle -> $32(a6), then a 14-unit wide lerp of the marker columns
+061f54	green_front_bar_draw	picks the bar table ($60DCC/$60DE4 by the green depth $10D83A) for state $10D60A 2/3 and draws it via FUN_000628DC
+061fde	pin_marker_blend	state machine $10D60A (1/2/3/0): blends the pin marker columns $10D97A/7C with $10D982/84 by 1/2 or 3/2 and flags $10D83E/F
+0620ae	pin_marker_above_check	d7 = -1 when $10D97A-$10D982 < -$180 (marker above the pin)
+0620d6	pin_marker_below_check	d7 = -1 when $10D97C-$10D984 <= $180 (marker below the pin)
+0620f8	pin_marker_bars_draw	draws the two marker bars with the tables $60E08/$6105E via FUN_00062830, gated by FUN_000620AE/FUN_000620D6
+062156	hole_map_row_blit	blits 9 rows of tiles from the sprite map $10E176 to the fix rows (sprite_map_blit at $10D608)
+06219a	hole_map_overlay_draw	blits 6 rows of 8 tiles from the banked block $23BD60 and patches the map cells $10E176 via FUN_000634EE (sets the $10D5F1 bit 7)
+0621ec	nearest_mound_find	scans the hole objects for the nearest type-6 (flag) object by |dx|+|dy| -> $10EB7E
+062266	mound_edge_y_set	FUN_0006229A on the flag object -> $10EB86 = max($20,angle)+$139 (the flag's screen x)
+06229a	mound_far_edge_row	angle between the player->object vector and the world axis ($10EB9C/$10EBA0) with the $4000 quarter turn; stores the squared length $10EB82
+062304	hole_marker_sort	bubble-sorts the 12-byte marker records $10E95C by their +8 field (type 3 records stay)
+062378	marker_range_check	carries when the ball distance bracket $10D5F8/5FA contains the marker pair $10D5F4/F6
+0623e2	range_contains	carry when d0 is inside [min(d1,d2),max(d1,d2)]
+062400	marker_count_above	counts marker records whose +8 field is >= d0 (only types 4/5/$A counted) and returns the smallest such +8 in d1
+062450	marker_actors_spawn	spawns one actor ($6784E) per sorted marker record with x/y/$48/$58/$4C/$40/$3C from the list, then runs FUN_000625C4
+0625c4	marker_state_update	calls FUN_0006813A / FUN_000681EE depending on the terrain $106FD6 (1/2)
+0625f4	marker_y_offset	flag-type marker (a2 byte 6): sets the $10D5F2 bit 7 and returns the +-$1FFF/$3FFF y offset
+062630	marker_distance_calc	marker-to-ball distance for the record at $10EB78 (via $5929A + FUN_00067FE6 + FUN_00063516)
+0626c0	hole_fairway_strip_draw	fills the $10D996 rows with the tile $6310/$1000 and stamps the $208140 strip, then draws the fairway band using the $10E956 rows
+062794	update_hole_strip_state	sets $10E95A = 1/2/3 from the pin/marker sentinels ($7FFF/$8000) in $10D972/97A/974/97C
+062830	hole_strip_blit	blits one fairway strip segment: selects the table row at a0 by the d0-d1 depth ($616E8 test) and calls FUN_000628DC/FUN_000628D2
+0628d2	sprite_map_blit_entry	a1 = $10E176 (sprite map) entry into the shared blitter body at $628E2
+0628dc	fix_row_blit_entry	a1 = $10D996 (fix row buffer) entry; also the shared blitter body (0 row = 9 cells, $38 rows) that skips the blank tile codes $241F08/$248650
+06299c	fix_tile_run_write	writes a run of d2 tiles ($6300 + word from a0) into the fix rows at d1
+0629e2	fix_cell_write	writes one long (tile word + attr) into the fix rows at (d1 row, d2 col), bounds $38 x 9
+062a06	fix_row_fill	fills the whole fix buffer ($38 rows) with the $6300/$1000 tile and stamps the $208240 strip by FUN_000628DC
+062a4a	cup_grid_build	builds the 52-entry cup grid $10D840 from the hole's (record+$E) list {u16 x, u16 y&$7FFF, ...}: two projected coordinates + a flag per entry (FUN_00063546/FUN_000635CC/FUN_00063602)
+062ab8	cup_grid_reset	resets the 3 cup-grid extents $10D972.. with the sentinels $7FFF/$8000
+062ad6	cup_grid_extent_scan	folds the 3 stored cup-grid rows $10D972.. through FUN_00062B06 with the $60DFC/$60E02 limits
+062b06	cup_grid_extent_update	projects one cup-grid entry into the current marker extents (a0) using the axis pair $10EB9C/BA0 and the scale ($10D992/994); clamps to +-$7FF and wraps the sentinels
+062c42	cup_grid_slope_calc	computes the maximum slope magnitude $10D83A by intersecting the grid rows (div_fixed_signed), keeping the running maximum
+062ce2	green_object_scan	walks the hole objects: keeps the green-area objects (type 0/1/2) within the marker frame, calls the per-type builders FUN_00063108/FUN_00063244/FUN_000634A0, appending 12-byte records to $10E95C
+063108	green_marker_draw_a	type-0 green marker: checks the depth $10EB98 <= $A4, runs the stamp ladder FUN_00063174 with the $62E30/$62ED8 tables, then FUN_000634EE on the map cells + the $10D5F0 bit 7 flag
+063174	green_stamp_draw	shared stamp ladder walker: picks the table by the type/flag (FUN_000628DC vs FUN_000628D2), scales the depth, and stamps the {w,h,ptr} rows of the ladder
+063244	green_marker_draw_b	type-1 green marker: distance-to-ball <= $30 test, ladders $62F88/$63000, then the FUN_000632C2 flag path
+0632c2	green_marker_flag	patches the map cells via FUN_000634EE (rows $12/$13) and sets the $10D5F1 bit 7
+0633c2	green_marker_draw_b_tail	flow tail of FUN_00063244 (branch target $633BE): the $10D5F1 flag test and the FUN_000B9BDE stream draw
+0634a0	green_marker_draw_c	type-2 green marker: rejects the record at $10EB8A, depth <= $98, ladder $63058
+0634ee	fix_cell_patch	scans $1F7 4-byte fix cells from a0+2 and replaces the byte d0 with d1 (a cell-code patch)
+063504	fixed_div_scaled	(d0<<4) / ((d1>>4) + 1.0) via div_fixed_signed: a signed 16.16 ratio used by the marker depth code
+063516	ramp_7x_over_x16	7*x/(x+16) in 16.16 (saturating ramp): x*7 via adds, denominator x+$10000, div_fixed_signed; converts distances to marker indices
+063546	cup_axis_calc	builds the rotated cup frame $10EBA4/BA8 from the player position and the axis ($10EB9C,$10EBA0): dy*cos - dx*sin and dx*cos + dy*sin
+0635cc	cup_local_x	((d0*$10EB9C) - (d1*$10EBA0)) + $10EBA4: the object x in the cup frame
+063602	cup_local_y	((d0*$10EBA0) - (d1*$10EB9C)) + $10EBA8: the object y in the cup frame
+063638	hole_map_palette_remap	resets the $10D998 map rows from the $63670 table and draws the $63678 stream (FUN_000B9BDE)
+06367e	hole_screen_activate	sets the fix/sprite map windows ($3C0000/$3C0002 VRAM port, $10D60C..$10D618), clears the two $10D62C/$10D730 line buffers, installs the vblank hook $63B5E ($102EA8) and the wipe tables $10EBCE/D2/D4
+063816	hole_wipe_tick	task hook: runs FUN_00063828 (line-buffer copy) and FUN_000638D4 (wipe rows)
+063828	hole_wipe_copy	copies 64 longs from the wipe source $10D62C to the VRAM source $10D730
+0638b8	hole_wipe_dir_set	FUN_00067F92 -> d1 = +-$10 added to the wipe column $10EB88
+0638d4	hole_wipe_rows_build	builds the wipe rows in $10D62C from the tables selected by the shot direction $106FEA ($606F4/$6093C/$60B84/$60DCC) with the span limits $10D616/618
+063988	hole_wipe_rows_build_b	helper loop of FUN_000638D4 (29-long add runs, branch target $63988)
+0639b0	hole_wipe_span_calc	computes the wipe spans $10D5FC/FE/$10D600/602/604 from the marker distances $10D5F4/F6/F8/FA and the map width $10EB86
+063ad8	hole_wipe_hook_select	picks the wipe hook: FUN_00063B34 (table $10D628) or $63BAA, and installs it into $10D622/$10D626
+063b34	hole_wipe_table_select	$10D628 = $63BDC/$63EC4/$63EA2 by the spans $10D602 and the depth $10D5F8
+063baa	hole_wipe_hook_a	wipe hook step A: counts $10D61A down and streams the $10D730 lines into VRAM ($3C0002); at the end re-programs the LSPC port and swaps to $63C4C
+063c4c	hole_wipe_hook_a2	wipe hook tail: writes the pending VRAM address $10D612, re-installs $63C8C and re-programs the LSPC port
+063c8c	hole_wipe_hook_b	wipe hook step B: streams the $10D730 lines, then restores the hook chain ($63B5E), the palette window $10EBCE and the per-course VRAM source $10D730/$10EB88, ending at $63D94
+063d94	hole_wipe_hook_b2	wipe hook tail: LSPC port + $10EBD4 window write, re-installs $63B5E
+063dce	hole_wipe_hook_c	wipe hook step C (installed through the RAM slot $10D622): counts $10D61A/$10D5FE down and re-arms $63E18
+063e18	hole_wipe_hook_d	wipe hook step D: counts $10D61A down, streams the lines, installed from the $63DCE tail
+063e40	hole_wipe_hook_e	wipe hook step E: uses the $10D600 span, arms $63E68, then jumps through the selected table $10D628
+063ea2	hole_wipe_hook_f	wipe hook: writes the VRAM source pair -$7DFEFC00 and installs $63EB8
+063eb8	hole_wipe_hook_f2	wipe hook tail: advances $10D620, writes the source pair, installs $63ED8
+063ed8	hole_wipe_hook_g	final wipe hook: counts $10D61A down and streams the lines into VRAM

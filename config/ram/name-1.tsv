@@ -1,0 +1,105 @@
+# name-1 lane RAM/hardware table (P1 fixed [0x0, 0xd54a)).
+# <hex addr>	<hex size>	<name>	<evidence>
+# Merged with the other lanes' tables by tools/symbols.py;
+# duplicates are resolved at merge.
+00100100	0060	task_node_main	boot task node ({node,entry} = {0x100100,0xd54a} in the $400 table, seeded by boot_init_actor_pool $428)
+001001c0	0060	task_node_5	boot task node ({0x1001c0,0xd5f6} in the $400 table) and the $428 loop terminator (cmpa.l #$1001c0,a6)
+001020a2	0012	sprite_list_head_prio	head node of the priority sprite list; lea ($1020a2).l in sprite_list_insert_prio $728 / sprite_list_build $788
+00102088	0002	sprite_node_budget	sprite node counter, 0x50 at reset (sprite_lists_reset $6f2), decremented per insert ($72e)
+0010209e	0004	sprite_node_pool_ptr	next free 0x12-byte sprite node, starts at $1020b4 ($6f2), bumped by addi.w #$12 in $728
+001020a0	0002	sprite_node_pool_used	legacy name: low-word alias of sprite_node_pool_ptr at $10209e, not a separate byte count; addi.w #$12 at $74e advances the full RAM pointer through its low word
+001020b4	05a0	sprite_node_pool	the 0x50 x 0x12-byte sprite node pool itself; $1020b4 + $50*$12 = $102654 exclusive end, immediately before the other sorted-list head
+00102654	0012	sprite_list_head_bg	head node of the background sprite list (sprite_list_insert $71e, sprite_list_build $788)
+0010266a	0001	vram_queue_buffer_sel	alternating queue buffer selector, flipped per frame by sprite_list_build $7b8/$834 (not.b)
+0010266b	0001	vram_queue_dirty	set by sprite_list_build ($830), consumed and cleared by vram_queue_flush $5d8
+0010266c	0004	vram_queue_current	pointer to the queue buffer being written this frame ($5d8 compares against it)
+00102670	0282	vram_queue_a	VRAM (address,data) word-pair queue buffer A (0x102670..0x1028f2), flushed by $5d8
+001028f2	0282	vram_queue_b	VRAM queue buffer B (0x1028f2..$102b74)
+0010209a	0004	vram_queue_write_ptr	queue write cursor for the node renderer ($79e=$10209a saved by sprite_list_build, advanced in sprite_node_render)
+0010209c	0002	scb3_write_ptr	legacy name: low-word alias of vram_queue_write_ptr at $10209a, not an independent SCB3 slot cursor; renderer pointer writes update the enclosing long
+00102b74	0004	scb_range_fg	foreground SCB range pair {start,end} written by sprite_list_build, trimmed by sprite_list_clear_stale
+00102b78	0004	scb_range_fg_end	second half of the foreground display range pair (end+$200)
+00102b7c	0004	scb_range_bg	background SCB range pair {start,end} (sprite_list_build $788)
+00102b80	0004	scb_range_bg_end	background range end+$200
+00102666	0002	camera_x	camera-relative X origin subtracted by sprite_node_render for nodes with flag bit 2
+00102668	0002	camera_y	camera-relative Y origin (sprite_node_render $d5c)
+00102098	0002	sprite_range_half	half-size of the current SCB range, computed by sprite_list_build and consumed by sprite_node_render
+0010208a	0012	render_node_state	sprite_node_render working copy of the current node (A2 = $10208a)
+00102c39	0001	ball_bounce_count	bounce counter, >= 5 settles the ball (addq.b #1 at $780a, skipped on surface 8)
+00102c3a	0001	shot_result_byte	cleared by $bcc8; bit 7 set there when the ball is beyond the $80b7a word distance and object 0 is the target
+00102c3b	0001	ball_ground_contact_flag	bset by the rolling code ($b6a0: bset #$0), cleared at launch
+00102c3c	0004	ball_speed	|v| in 16.16, recomputed by vec2_normalize $74c0 and compared against 2/4/8.0 in the flight code
+00102c40	0004	ball_vel_x	ball velocity X (16.16, per-frame); FINDINGS.md session 5
+00102c44	0004	ball_vel_y	ball velocity Y (16.16)
+00102c48	0004	ball_vel_z	ball velocity Z (16.16), gravity term in airborne_velocity_update $75aa
+00102c4c	0004	ball_roll	ground roll kick (launch store $4e44/$4e6a area; scaled by the landing coefficient $102c9c at $7b12 in ball_roll_spin_transfer $7a22)
+00102c50	0004	ball_roll2	second roll term (the post-landing roll transferred to velocity by ball_roll_spin_transfer $7a22)
+00102c54	0004	ball_spin	sidespin (16.16): vx += spin*uy in the airborne tick; FINDINGS.md session 6
+00102c58	0004	ball_lift	backspin lift (16.16), decays by the drag factor and adds to vz
+00102c5c	0004	ball_wind_x	wind X component (player wind strength x sin(direction), $4f2a)
+00102c60	0004	ball_wind_y	wind Y component ($4f4c)
+00102c64	0004	ball_wind_height_factor	height-dependent wind factor 0/0.75..1.0 computed in airborne_velocity_update $75aa
+00102c74	0004	ball_prev_x	pre-step position X saved by the motion sweep $7eba (a5-$548c)
+00102c78	0004	ball_prev_y	pre-step position Y (a5-$5488)
+00102c7c	0004	ball_prev_z	saved end-of-frame z (sweep 0x7eba); bset #7 at 0x834e sets the long's sign bit (MSB), which makes the sweep skip its position restore
+00102c80	0004	ball_unit_x	horizontal unit vector X from vec2_normalize
+00102c84	0004	ball_unit_y	horizontal unit vector Y
+00102c88	0004	shot_launch_angle	club launch angle in 12-bit turns, set by club_angle_get $5304
+00102c8c	0004	shot_power_factor	power-curve factor, set by power_factor_get $5578
+00102c90	0004	ball_ground_height	ground height under the ball (16.16), sampled by ground_height_at_ball $460a
+00102c94	0004	sweep_step_count	sub-step count of the sweep $7eba (cleared at the start, addq.w #1 on the high word each step: a 16.16 count); 0x7fea turns it into ball_deflect_scale = -((16.0 - count) >> 8); not a remainder
+00102c98	0004	ball_deflect_scale	in $b6a0: ((delta+$c000)/vz)>>4, the step fraction past the pin plane - $c000 floor; $b820 re-advances by it; 0x7fea sets -((16.0 - sweep steps) >> 8) for 0x800a
+00102c9c	0004	ball_landing_coeff	landing coefficient from the surface table $7346 (+$0, read at $7748); scales vx/vy/spin
+00102cb0	0004	putt_wind_push_mag	putt wind push magnitude ($b112), applied along the wind vector $102ca8/$102cac
+00102cb4	0004	aim_rot_sin	receives the table $337e value t/sqrt(1+t^2) (t = aim value/444), intermediate of aim_vector_set $bdc6; evidence was swapped with $102cb8
+00102cb8	0004	aim_rot_negcos	receives the table $3982 value -1/sqrt(1+t^2), intermediate of aim_vector_set $bdc6; evidence was swapped with $102cb4
+00102cbc	0004	aim_unit_x	aim unit vector X built by aim_vector_set $bdc6, consumed by shot_launch
+00102cc0	0004	aim_unit_y	aim unit vector Y
+00102cc4	0004	bounce_normal_x	bounce surface normal X (sin/cos of the landing angle, ball_landing_deflect $7c78)
+00102cc8	0004	bounce_normal_y	bounce surface normal Y
+00102ccc	0004	bounce_normal_amount	-2*(v.n) for the bounce normal, added (times n) to vx/vy/vz by 0x7c78
+00102cd0	0002	ball_surface_type	terrain class under the ball (0..0xb), written by ball_surface_classify $93fa from $5b974
+00102cd8	0004	ball_anchor_x	reference point ball_reseat_after_collision $913c re-seats the ball from (radius from the $9124 table)
+00102cdc	0004	ball_anchor_y	reference point Y ($913c)
+00102ce8	0002	sweep_z_int	int(ball_z) saved by the sweep $7eba each sub-step (0x7f4c); when negative and a band exists ($10d4d2 >= 0) contact goes to $800a (tst at 0x7fe0); not an armed flag
+00102cea	0004	sweep_ground_height	ground_height_at_ball result stored by the sweep $7eba (0x7f00/0x7f80; reused when $102d27 is set); 0x8200 takes |ball_z - it| as the obstacle depth
+00102cee	0001	ball_ground_flags	bit 7 set when ball_z <= ground + 20.0 or ball_z < 0 (ball_ground_proximity $7490); the byte is cleared by ball_integrate_xy $7446
+00102cef	0001	ball_collision_flags	obstacle contact bits: 0 bset by handler 0 $8388, 1 by $83b4, 2 by $85ea (each returns when its bit is already set; $85ea also when bit 1 is set); bits 1/2 cleared each frame by ball_integrate_xy $7446, the byte by clr.b at $4cbe
+00102cf0	0001	putt_state_start	putt state key copied from $102cf1 when the putt engine takes over ($95aa), combined with it as a table index by $b06a
+00102cf1	0001	putt_state_current	key 0..3 from $b8b6 (pin dist >= $6000: 0/3, else 1/2, the low value when putt_along_aim < 0); with $102cf0 indexes the $b1ae table at $b1a8; cleared at $4cd4
+00102cf2	0004	putt_along_aim	(ball - pin) . ball_unit (along the heading) from $b664; read by $b8b6 and $d00a
+00102cf6	0004	putt_pin_distance	ball-to-pin distance term used by the putt roll states ($b358/$b986/$d00a)
+00102cfa	0004	putt_lateral_offset	lateral offset of the pin from the travel line, uy*(px-bx) - ux*(py-by), written only by $b94a (no $b968 entry)
+00102d02	0004	putt_depth_term	sqrt($1000 - ($4000 + height delta)^2) from $b8ec (0 at/above the pin plane, $4000 at <= -$4000 below), scaled by $102d0a in $b378/$b986; not a pace
+00102d06	0004	putt_pull_term	hole-out pull term (signed divide result, $b378)
+00102d0a	0004	putt_pace_ratio	$6000/(putt_depth_term + putt_pin_distance) ($b358)
+00102d12	0004	putt_approach_scale	approach scale applied to vx/vy in the strength curve $b986
+00102d16	0004	putt_pull_x	X of the pin-to-ball unit vector (ball - pin)/distance ($b2d6/$b300)
+00102d1a	0004	putt_pull_y	Y of the pin-to-ball unit vector (ball - pin)/distance ($b2d6/$b300)
+00102d1e	0004	putt_sqrt_term	sqrt term of the hole-out approach ($b3a2)
+00102d22	0004	putt_roll_term	saved roll term of the hole-out approach ($b3d6/$b4d4)
+00102d26	0001	putt_hole_flag	bit 7 set by the hole-out sequence ($b378), cleared at launch
+00102d27	0001	ball_landing_flag	$ff = the sweep reuses $102cea instead of resampling (set before the loop at 0x7f1a/0x7f38, tested at 0x7f74); not a landing flag
+00102d28	0001	ball_bounce_dir	terrain byte from $5933e via $76a2 (0..$f or $ff), stored at landing; $78a8 replaces it with a random 0..$f on map class $1280 (surface 8); $7c78 uses it as the bounce direction (byte<<8), $ff = only negate vz; $94ae compares it with $f
+00102d29	0001	shot_bend	shot bend 0/1/2, may be set by perfect hits at the accuracy meter 0x72638; in shot_launch value 1 makes roll2 = 3*roll and value 2 makes roll2 = 0 ($4e4a-$4e6a); bend_club_check $4c8e clears 1 for woods/putters; 1 and 2 are not a proven left/right pair; gates the roll kick and the cup pull
+00102d2a	0004	roll_transfer_amount	roll amount projected into velocity by ball_roll_spin_transfer $7a22
+00102d2e	0004	roll_projection	(vx,vy).(ux,uy) after the roll kick ($7a22, stored at $7aa0); <= 0: reverses the roll when shot_bend == 1 (zeroing roll and velocity when exactly 0), else zeroes them
+00102d32	0004	ball_obstacle_depth	|z - landing delta| computed by obstacle_collision_check $8200
+00102d36	0004	obstacle_walk_sp	saved stack pointer of the obstacle list walk ($821c/$8238)
+00102d3a	0100	obstacle_list	{long hole-object record ptr, word kind} entries written by the obstacle list build 0x7d96, read by 0x821a; zero-long end
+00102b84	00b4	hole_object_actor_slots	45-long slot array, slot n for hole-object record n: cleared by hole_object_actors_spawn $2d8a (moveq #$2c + dbf = 45 longs), set to the record pointer when the object's actor spawns, cleared through actor +$44 at $2f9e when it despawns; the obstacle list build $7d96 walks them from slot 0 or 1 up to $102c38; no divots
+00102b88	00b4	divot_list_b	slot 1 of the $102b84 hole-object slot array (an alias, not a second list); $7d96 starts there when rng&3 != 0
+00102db6	0001	landing_sound_latch	bit-7 latch: bset at $7956 in $793c (surface-8 landing outside class $1280) picks sound $10ae the first time, then $10ad; cleared at $4cbe; nothing proves "in hole"
+00102e48	0002	scb1_base	SCB1 base slot of the sprite area, reset by the map blit wrapper $d0f6
+00102e4a	0002	sprite_area_start	foreground sprite range start (sprite_list_build reads it as the SCB1 base)
+00102e4c	0002	sprite_area_split	background sprite range boundary used by sprite_list_build
+00102e4e	0002	sprite_area_end	foreground sprite range end
+00102e50	0002	map_col_fg	foreground map column cursor (clamped to 0x17c by $d172)
+00102e52	0002	map_col_bg	background map column cursor ($d142 advances it)
+00102e54	0001	vblank_gate_once	one-shot gate in the vblank handler ($d430: set to 1 on the first pass, gates the $6a134 branch)
+00102e56	0001	palette_upload_request	checked and cleared by the vblank handler, then $ca892 palette upload runs
+00102e57	0001	display_driver_gate	gates the $6a2f6 display driver call in the vblank handler
+00102e59	0001	watchdog_poke_gate	vblank counter; the $300001 watchdog poke runs while it is <= 0x14 ($d430)
+00102e5c	0002	frame_counter	incremented by $d430 only when vblank_gate_once is already nonzero; first serviced vblank performs uploads/queue/tasks/sound instead; cleared by frame wait $d54a
+00108100	0004	ball_state_base	base pointer idiom a5 = $108100: the ball state is addressed with negative displacements (-$5498 = $102c68 etc) in the sweep $7eba
+0010ebbc	0001	obstacle_hit_type	type of the last obstacle record hit (move.b d2,($6abc,a5) at $82ca, a5 = $108100; types $04-$14, type 0 leaves it); clr.b at $4cbe; read by $83b4 (type $0c/$10/$14 scaling, $14 spawn), by $913c as the byte offset into the $9124 radius table, and by $69ed4

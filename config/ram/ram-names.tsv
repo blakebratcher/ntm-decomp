@@ -1,0 +1,101 @@
+# Lane ram-names: work-RAM variables that had no row in config/ram/*.tsv.
+# <hex addr>	<hex size>	<name>	<evidence: who reads/writes it and what it holds>
+# Rows are names for addresses only (never a rename of an existing row); the
+# evidence names the writer/reader instructions and the value range observed.
+# Region/record overview: docs/subsystems/ram-map.md; census tool:
+# tools/lane_ramnames_scan.py.
+#
+# --- ball effect actor fields (docs/subsystems/name-4.md) -------------------
+0010ebae	2	ball_cell_terrain	ball's cell terrain code (0=bunker? 3, 6, 0xb checked): written by ball_cell_terrain_update 0x68a96, read by the effect states 0x68c16/0x68da4 and the impact checks 0x6913a/0x69188; published to 0x10ebba by 0x68e32
+0010ebb0	1	ball_effect_active	nonzero = the ball effect actor is running: set by ball_effect_actor_init 0x68b88, 0x68e32, bounce init 0x69f02 and 0x5ac62; cleared by 0x68ad4/0x68b1e/0x69f32; halved aim scale in 0x68a96, gates 0x6bee6
+0010ebb2	4	trail_stream_buf	4-byte shot-trail stream buffer, filled with -1 by the impact actor (0x6913a/0x69188 set the long 0xffffffff) and appended byte-wise through the actor field +0x58 = 0x10ebb2 (cmpi.l #$10ebb6 stops at 0x692c4)
+0010ebb6	1	trail_stream_end	the byte after the trail buffer: same -1 store sequence clears it to 0xff; its address is the append limit (cmpi.l #$10ebb6,($58,a6) at 0x692c4), so the stream spans 0x10ebb2..0x10ebb5
+0010ebb7	1	trail_effect_id	shot effect id: shot_trail_actor_init 0x6935e publishes (a6)+0x11 here, trail_actor_state 0x69600 re-keys the {frame,delay} tables from it (>2 -> 0x69e68/0x69e8c, else 0x69e94/0x69eb8)
+0010ebb8	2	impact_shared_x	x coordinate published by the splash/impact actors and read by the flag state: written from (a6)+0x32 by 0x69416, compared with 0x17c by impact_actor_flag_state 0x695a2 (docs/subsystems/name-4.md "shared x")
+0010ebba	2	impact_cell_terrain	published copy of 0x10ebae: 0x68e32 stores it on landing, impact_actor_state_a 0x6913a picks palette 0xe0/0xe1 and frame 0x9320e/0x93248 when it is 3
+0010ebc0	2	panel_fix_dest_addr	fix-layer destination word loaded into a1 (movea.w) and passed with the string tables 0x6b918/0x6b92c/0x6b93c to fix_tile_string_draw 0xd828 by start_panel_draw 0x6b964; no writer in the covered corpus (open)
+#
+# --- result message / overlay lists (name-6 + name-8 lanes) -----------------
+0010ebec	2	result_message_word_2	second result sound-id word of result_message_words 0x10ebea: $1199 or 0 (the composer 0x75afc fills it), tested by 0x75904 for the hold timer and sent by scorecard_message_cue 0x75a8e; not a P2 word (semantic-review-p1-75afc)
+0010ebee	2	result_message_word_3	third result sound-id word at +4 of result_message_words 0x10ebea: always 0 (cleared by 0x75afc and never appended), so the 0x75904 arms that test it (0x75970, 0x759aa, 0x75a24) never run (semantic-review-p1-75afc)
+0010ebf3	1	message_counter_b	second of the two byte counters at message_counters 0x10ebf2: message_word_append 0x75ae8 adds 7 per appended word, leaderboard_init 0x743a6 seeds it 0x48
+0010ece2	1	overlay_slot_count	sprite-overlay slot counter: overlay_objects_build 0x809c0 seeds 0x14, overlay_list_insert 0x80b36 decrements it per item and runs `trap #$f` when it goes negative
+0010ece4	4	overlay_node_free_ptr	next free 8-byte overlay node (long, starts 0x10ecf8): read by overlay_list_insert 0x80b36 and advanced by addi.w #$8 on its low word 0x10ece6 (high word stays 0x0010)
+0010ece6	2	overlay_node_free_low	low word of overlay_node_free_ptr 0x10ece4: the +8 bump of the node allocator (addi.w #$8,($10ece6) in 0x80b36)
+0010ece8	4	overlay_list_head	head pointer of the sorted overlay list (starts at 0x10ecf0 = the head node): installed by overlay_objects_build 0x809c0, walked/updated by overlay_list_insert 0x80b36, read as a0 by overlay_objects_build 0x80aa0
+0010ecf0	8	overlay_head_node	node 0 of the overlay pool, used as the list sentinel {next, y, x}: installed as the head 0x10ece8 by 0x809c0 and used as the walk start by 0x80b36 (compare at +4)
+0010ecf4	2	overlay_head_key	sort key (+4 = y) of the overlay head node 0x10ecf0: cleared by overlay_objects_build 0x809c0, compared as the first key by overlay_list_insert 0x80b36 (`cmp.w ($4,a0),d0`)
+0010ecf8	8	overlay_node_pool	first allocatable 8-byte overlay node {next long, +4 y, +6 x} (pool base; the free pointer 0x10ece4 starts here and advances by 8 per insert)
+0010ed98	4	panel_header_ptr	pointer to the panel header record being uploaded: stored by overlay_objects_build 0x809c0 (move.l a2) and reloaded by overlay_objects_build 0x80aa0 to read +0/+2 (0x10eda0)
+0010ed9e	2	panel_vram_cursor	VRAM write cursor of the panel upload: set to (0x10eda0 - 0x7dff) by 0x809c0 and to the row end by 0x80aa0, which hides the entries between the old and new cursor
+#
+# --- per-player input bytes (docs/subsystems/name-8.md input chain) ---------
+0010d515	1	input_pad_p1	P1 new-edge byte (Neo Geo layout bits 0-3 = up/down/left/right, bits 4-6 = A/B/C): bios_input_copy 0x601b0 copies it from $10ef25 exactly as the P2 edges 0x10d520 come from $10ef2b; continue_countdown_digit 0x7c852 waits for bits 4-6 (andi.b #$70), 0x6a622 bit 4 starts the meter, putt_input_guard 0x7d506 tests bits 4/5/6 (A/B/C edges), 0x73dc4 treats it as edges; copied into input_word_b 0x10d52b (semantic-review-p1-71614, semantic-review-p1-7d4be)
+0010d516	1	input_dir_p1	P1 direction byte of the triplet (bits 0/1 = up/down, 2/3 = left/right): wind_nudge_input 0x55640 nudges wind direction/strength from bits 3/2 and 0/1, active_input_player 0x0f1dc and 0x73dc4 copy it into 0x10d52c (hole step 0xf31a uses bits 0/1)
+0010d521	1	input_dir_p2	P2 twin of input_dir_p1 0x10d516 (the triplet is 0x10d514/15/16 for P1 and 0x10d51f/20/21 for P2): read by wind_nudge_input 0x55640 when the active record is P2 and copied into 0x10d52c by 0x73dc4
+0010d52d	1	input_merge_bios	BIOS-latch merge byte: input_sampler_merge $60200 ORs P1/P2 BIOS inputs $10fd96/$10fd9c; read by how-to-play watch $e760 (A/B/C mask $70) and $e77e (D bit 7, dormant record arm).
+0010ef2f	1	demo_input_p2	P2 synthetic input byte of the demo path: input_sampler 0x85086 feeds it into the P2 port record 0x10ef28 (0x10ef2e is the P1 twin in demo_input_bytes 0x10ef2e); toggled bit-wise by demo_input_record 0x852a2 and demo_input_playback 0x8533e
+0010ef3b	1	input_repeat_period	low byte of input_repeat_word 0x10ef3a (big-endian: the value sits at +1): the auto-repeat period reloaded into each port record's countdown (a0)+5 by input_sampler 0x85086 after an auto-repeat; the delay 0x10 is the +0 byte
+#
+# --- sprite walker state (inside name-1 render_node_state 0x10208a) --------
+0010208e	1	render_node_rows_left	legacy name: remaining frame parts, decremented per part rather than per tile row in sprite_node_render; zero advances to the next sorted node
+0010208f	1	render_node_row_delta	per-row step byte: built as `not.b (a6)+0xf << 4` at 0xa00:378 and subtracted from render_node_pos_byte 0x102090 each row (sub.b at 0xa00:386)
+00102090	1	render_node_pos_byte	the position byte stepped by render_node_row_delta: sub.b d0,($102090) then wrap-tested (0xa00:386-445)
+00102092	2	render_node_width	width word of the current sprite-list record (record+4, reloaded per record at 0xa00:199/295): strides the row walk (mulu.w $102092 at 0xa00:283/439)
+00102094	2	render_node_height	height word of the current record (record+5, stored at 0xa00:296 in the second walker path): pairs with render_node_width for the row/column walk at 0xa00:352
+00102096	2	render_node_vram_base	legacy name: packed X/Y shrink control from sorted-node bytes +$e/+$f, not a VRAM base; used for SCB2 shrink words and per-column X-shrink adjustment
+00102658	2	sprite_list_head_bg_prio	second word of the background sprite-list head 0x102654 (its +4): zeroed together with the head long by sprite_lists_reset 0x6f2 (clr.l 0x102654 + clr.w 0x102658), the sibling of the priority head's +4 cleared at 0x6f2:9
+#
+# --- leaderboard (name-6 lane; 5-byte records at 0x100004+5n) --------------
+0010000d	1	leaderboard_course_2	course index byte (+4) of best-score record 2 (0x73e40 writes course_index_byte); read by 0x74120 (mulu #$9 indexes the four course-name records at 0x745ce); the +4 bytes of records 1..5 are 0x100008/0x10000d/0x100012/0x100017/0x10001c; not a golfer/name index (semantic-review-p1-73f80)
+00100012	1	leaderboard_course_3	course index byte (+4) of best-score record 3 (see 0x10000d) (semantic-review-p1-73f80)
+00100013	1	leaderboard_score_4	score-to-par byte (+0) of leaderboard record 4 (0x100004 + 5*3): the shift-down copy source of leaderboard_insert_actor 0x73dc4 (5-byte moves at 0x73e00)
+00100017	1	leaderboard_course_4	course index byte (+4) of best-score record 4 (see 0x10000d) (semantic-review-p1-73f80)
+00100018	1	leaderboard_score_5	score-to-par byte (+0) of leaderboard record 5: round_results_actor 0x73b92 reads it, adds 0x48 (par 72) and compares with the player index before spawning the insert actor
+0010001c	1	leaderboard_course_5	course index byte (+4) of best-score record 5 (see 0x10000d) (semantic-review-p1-73f80)
+00100042	24	leaderboard_row_text_2	name buffer 2 of leaderboard_row_text 0x10001e (36-byte slots at 0x10001e+0x24n): drawn by leaderboard_table_actor 0x74120 as a5 with the 0x5b00 tile stream, edited by the name-entry actor 0x743a6
+00100066	24	leaderboard_row_text_3	name buffer 3 (see leaderboard_row_text_2 0x100042)
+0010008a	24	leaderboard_row_text_4	name buffer 4 (see leaderboard_row_text_2 0x100042)
+001000ae	24	leaderboard_row_text_5	name buffer 5 (see leaderboard_row_text_2 0x100042)
+#
+# --- actor pool ------------------------------------------------------------
+00100220	60	actor_spare_node	spare 0x60-byte actor node returned by actor_spawn_child 0x4c6 when the free list is empty (`lea ($100220).l,a0; rts`): callers write their state into it instead of a real node; it fills the gap between task_node_5 0x1001c0 and the actor pool
+00100280	8160	actor_pool	the 0x51 x 0x60-byte actor slots 0x100280..0x1020e0 linked into the free list 0x102080 by boot_init_actor_pool 0x428; actor_spawn_child 0x4c6 pops nodes here and 0x0a00 walks them per frame
+#
+# --- roster rows (name-6 leaderboard_rows 0x10eda2, 8-byte entries) -------------
+0010ee92	8	roster_row_p2	row 30 of the leaderboard (0x10eda2 + $f0): leaderboard_init 0x83a0c puts P2 ('PLAYER 2' 0x838fb, +7 |= $0d) here when P1 is installed in row 31, else P2 takes row 31
+0010ee9a	8	roster_row_p1	P1 player row of the roster/score table (the entry before card_record 0x10eea2): leaderboard_init 0x83a0c writes the name pointer 0x838f2 at +0 and sets status bits 0/1/3 at +7 when golfer_id_p1 0x107005 is valid
+#
+# --- course word / row bases ---------------------------------------------
+0010d4b9	1	course_index_byte	course number byte actually holding the value of the course_index word 0x10d4b8 (big-endian word store puts it at +1): written from the 0xf2ea demo table ((course,hole) pairs 1/5, 2/6, 0/7, 3/4, 3/3) by attract_round_setup 0xf22e; bit 0 offsets the scorecard header 0x770a0/0x77260/0x77154 by 8px and 0x73dc4 copies it into the leaderboard record's +4 (index into the 4 course-name records 0x745ce)
+0010d750	2	vram_stage_row1_base	row base word (d0) for backdrop band layer 1: backdrop_rows_setup 0x63f86 reads it into d0 and calls scb1_ring_column_step 0x64066 with a1 = a6+0x46, d1 = 1; row N base = 0x10d730 + 0x20N inside vram_stage_rows
+0010d770	2	vram_stage_row2_base	row base word for backdrop band layer 2 (same reader, d1 = 2, a1 = a6+0x4c)
+0010d790	2	vram_stage_row3_base	row base word for backdrop band layer 3 (same reader, d1 = 3, a1 = a6+0x52)
+#
+# --- cup grid (name-3 cup_grid 0x10d840, 3 words per entry) ---------------
+0010d842	2	cup_grid_entry0_y	y word of cup grid entry 0: cup_grid_slope_calc 0x62c42 pairs it with entry0.x 0x10d840 as the closing point when the next entry carries the 0x7ff0 sentinel; cup_grid_extent_update 0x62b06 falls back to it for the extent
+0010d844	2	cup_grid_entry0_flag	flag word of cup grid entry 0 (+4): cup_grid_extent_update 0x62b06 ORs it with the next entry's word into the extent scale 0x10d994 when the grid ends (0x7ff0 sentinel)
+0010d994	2	cup_extent_scale_b	second word of the cup_extent_scale pair 0x10d992: cup_grid_extent_update 0x62b06 stores the OR of the grid entry flags here and copies it into the extent record's +6; read back by the marker extents via cup_extent_scale
+#
+# --- round flags -----------------------------------------------------------
+0010d5ee	1	screen_transition_flag	round/screen transition latch: bit 7 (bset) set by the round entry paths 0xeb28 hole_start, 0xeca4 scorecard_enter, 0xe8d4/0xe9e2 demo entry, 0xe7f4, 0xed08 and by the shot sequencer 0x58274 when hole_number 0x10d4bc >= 0x12 (round over), always together with start_join_lock 0x102eb9; cleared by golfer_actor_spawn 0x54c3c per shot; write-only in the covered corpus (open: reader outside coverage)
+0010d572	1	hole_stock_p1	player_status_p1 ($10d52e) +$44: P1 hole stock, seeded by the PLAYER_START handler 0xe238 from the soft DIP HOLE(1st) $10fd88 (or HOLE(cont) $10fd8a + 1 when continuing); -1 at every hole_load (0x5ab82 from 0x5a15c), + |strokes - par| for an under-par hole and +3 for a hole in one (0x6d5da loop), +1 for the contest-hole record holder (jsr at 0x6d09c in 0x6cff4), MATCH HOLE tally +1/-1 (0x6c89e), -1 for a hole at or over the HOLE PENALTY threshold (0x6d5a2); cleared for the loser of a decided match (0xed52) and, on MVS with CONTINUE off, at 0xeddc; not a credit display; the P2 twin is 0x10d5d2
+0010d5d2	1	hole_stock_p2	player_status_p2 ($10d58e) +$44: P2 hole stock, same writers as 0x10d572 (0xe238 from the HOLE soft DIPs $10fd88/$10fd8a, 0x5ab4e/0x5ab82 inc/dec, cleared at 0xed52/0xeddc); not a credit display
+#
+# --- HUD gates / records ---------------------------------------------------
+0010fd8c	1	soft_dip_match_hole	BIOS_GAME_DIP+8, soft DIP list 3 'MATCH HOLE' (0 WIN +/LOS 0, 1 WIN +/LOS -, 2 WIN 0/LOS 0, 3 WIN 0/LOS -): 0x6c89e gives the hole winner +1 hole stock (0x5ab4e) unless bit 1 is set and takes 1 from the loser (0x5ab82, when its stock > 0) when bit 0 is set
+0010fd92	1	soft_dip_credit_level	BIOS_GAME_DIP+$e, soft DIP list 9 'CREDIT/LEVEL' (ON/ON, ON/OFF, OFF/ON, OFF/OFF): bit 0 clear lets hud_player_panel_draw 0x6a2f6 draw the P1/P2 panel, bit 1 clear lets hud_records_draw 0x6a134 draw the records panel (both also need BIOS_MVS_FLAG 0x10fd82)
+0010fe00	24	records_table	records-panel source rows: hud_records_draw 0x6a134 walks it as a1 (label tiles 0x6a192 + entry digits) and falls back to the backup-RAM copy 0xd00034 when BIOS_DEVMODE 0x10fe80 == 0; the writer/saver is outside the covered corpus (open; size is the 6-row panel span)
+#
+# --- 0x26-byte player records (player_record_p1 0x107004, _p2 0x10702a) ----
+00107006	1	player_rec_shot_p1	P1 record +2 = number of the shot being played (0x58274 increments it each shot; the banner 0x79f7e prints '1'+(rec+2-1) before 'ND SHOT', and rec+2 == hole+1 picks 'FOR PAR'); leaderboard_human_hole 0x83c24 subtracts it from the 0x5897a result to advance the AI roster entry; not a score relative to par; the P2 twin is 0x10702c
+0010702c	1	player_rec_shot_p2	P2 record +2 (0x10702a record) = number of the shot being played (see 0x107006); read by leaderboard_human_hole 0x83c24 when entry flag bit 1 (its +7) selects the P2 row
+00107008	2	demo_tee_x	first word of the 5-entry demo tee table 0xf2d6 (x/y pairs; 0xe9/0x223, 0x180/0x46f, 0x11b/0x2fa, entry 0 and 4 zero): attract_round_setup 0xf22e stores it here (+4 of the P1 record) for the demo round and skips the pair when the x word is 0, then spawns the shot sequencer 0x58274; no in-corpus reader (open)
+0010700c	2	demo_tee_y	second (y) word of the same 0xf2d6 demo tee entry, stored next to demo_tee_x 0x107008 by attract_round_setup 0xf22e
+00107026	1	player_rec_hole_done_p1	P1 record +$22 hole-done byte: 0 playing, 1 holed out (0xbc98), $ff over par+3 (0x6cdca), or $ff/1 from the 0x6c1e8 prompt (0x6c242/0x6c248); hole_complete_check 0x58aee ends the hole on it in game_mode 0 (P1's byte when BIOS_PLAYER_MOD1 == 1, else P2's) and ANDs both in game_mode 1; cleared by hole_load
+0010704c	1	player_rec_hole_done_p2	P2 record +$22 hole-done byte (0x10702a record), same values and readers as player_rec_hole_done_p1 0x107026
+00107028	1	player_rec_in_play_p1	P1 record +$24, tee honour: hole_result_record 0x58b64 sets 1 for the player with fewer strokes and 0 for the other; active_player_pick_far 0x589f6 reads it when both stroke counts are 0; 0xe9e2 sets P1 = 1 and clears P2's $10704e at the start of every round (both game_mode paths); not a 'takes part' flag
+0010704e	1	player_rec_in_play_p2	P2 record +$24, tee honour (see 0x107028): cleared by 0xe9e2, written by hole_result_record 0x58b64, read by active_player_pick_far 0x589f6
+#
+# --- ball lie --------------------------------------------------------------
+00106fd7	1	ball_lie_variant	variant byte of the ball lie (the +1 byte of ball_lie_surface 0x106fd6; docs/subsystems/name-4.md: "ball lie type / its variant byte"): ball_effect_actor_init 0x68b88 copies it into the effect actor's +0x13

@@ -1,0 +1,57 @@
+# M1 (Z80 sound driver) work RAM, lane m1-name.
+# Format: <hex addr>	<hex size>	<name>	<evidence note>
+# The Z80 sees 8 KiB of RAM at 0xf800-0xffff (MAME neogeo.cpp audio_map).
+# Addresses are Z80 addresses; the values are the driver's own layout, read
+# off the per-frame services and the sequence interpreter.
+# Globals
+0xf800	1	frame_counter	incremented by the main loop at 0x1e41; command 0x01 reloads it with 0x18 (0x1f39)
+0xf801	1	frame_semaphore	timer IRQ raises it, saturating at 2 (0x1e91-0x1e96); the main loop spins on it at 0x1e5d
+0xf802	1	tick_count	incremented by the timer IRQ at 0x1e98; read and cleared by the main loop at 0x1e63
+0xf803	1	ticks_this_pass	Timer IRQ count latched from $f802 at $1e67 per main-loop pass, not per video frame (tick = 5.994 ms nominal); read at $4e33: 0 skips tempo contribution, 1/2 add that many, >=3 adds three and drops excess (semantic-settle-m1).
+0xf804	2	master_fade	16-bit master fade level, ramped at 0x4d40-0x4d70 and clamped to 0xffff/0x0000
+0xf806	2	fade_step	per-frame fade step selected by fade_step_set (0x4f9f) from the table at 0x4f92
+0xf808	1	fade_direction	1 = fade down (sub-command 0x0a at 0x2187), 0 = fade up (0x0b at 0x2192); tested at 0x4d47
+0xf809	1	tick_due	music tempo tick flag: raised at 0x4e55 when the tempo counter underflows, cleared at 0x4d74; read by the channel timers (0x26fe/0x28a3/0x2a48/0x2e73/0x30b1/0x32ef/0x352d), the ADPCM-A voice timers (0x38a8/0x39ee/0x3b34/0x3c7a/0x3dc0/0x3f06) and 0x4244 (semantic-review-m1-03c72)
+0xf80a	1	ym_status	YM2610 status byte latched at 0x1e9b; tested for busy/EOS bits at 0x37b7/0x4040/0x38fd
+0xf80b	2	ym_saved_port_reg	(port, register) pair saved by ym_reg_write (0x0010) and re-selected by the timer IRQ handler at 0x1ea6
+0xf80d	1	reply_byte	byte written to the reply latch port 0x0c (0x1f47/0x4fa4); cleared at init (0x1e01)
+0xf80f	1	cmd_queue_head	ring read index, cleared at 0x1eb4 and advanced at 0x1ecc
+0xf810	1	cmd_queue_tail	ring write index, cleared at 0x1eb7 and advanced at 0x1efd
+0xf811	1	bank_entry	the 16 KiB bank entry currently programmed into the 0x8000 window; cache compared by banked_ptr_load (0x1fb3)
+0xf812	2	scratch16	intermediate 16-bit pitch/level value in the SSG/FM/ADPCM services (0x262d, 0x2ca4, 0x412d)
+0xf814	1	scratch_level	current level value handed between the service stages (0x25a8, 0x274d, 0x28f2)
+0xf815	1	song_number	command byte minus 0x20, stored at 0x209b and read by the sub-command handlers
+0xf816	1	song_stop_flag	0xff requests a stop (0x210f), consumed at 0x2115-0x211c
+0xf817	1	queued_song	sub-command 0x07 stores the song here (0x216c) for sub-command 0x08 (0x2178)
+0xf818	1	next_song	pending song for the fade-out path (0x2181, 0x2102) and the song start (0x20d4)
+0xf819	2	cmd_serial	command counter (0x2058); stored per owner at start (+0x07/+0x08) and compared for equality by the allocator (0x50fc) and 0x5210 (same-command test), not used as an age (semantic-review-m1-0504e)
+0xf81b	1	last_music_cmd	the last command >= 0x20, stored at 0x2096 and used at 0x211f
+0xf81c	1	sub_cmd	the last command < 0x10, stored at 0x2063 and used to select the music sub-command
+0xf81d	2	rng_state	pseudo-random state advanced with `ld a,r` at 0x230b and 0x23a0
+0xf903	2	pitch_global	16-bit global set at 0x2556 (ssg_init) and updated by the music services (0x2618 etc.)
+0xf905	1	ssg_volume_a	SSG channel A volume; 0x38 at init (0x2529), written to SSG reg 0x08
+0xf906	1	ssg_volume_b	SSG channel B volume; 0x38 at init (0x252c), written to SSG reg 0x09
+0xf907	0x67	fm_voice1	FM voice record 1 (fm_voice_rec_init at 0x2bb7); voices 2-4 at 0xf96e/0xf9d5/0xfa3c
+0xf96e	0x67	fm_voice2	FM voice record 2
+0xf9d5	0x67	fm_voice3	FM voice record 3
+0xfa3c	0x67	fm_voice4	FM voice record 4
+0xfaa5	0x29	adpcm_a_voice1	ADPCM-A voice record 1 (adpcm_a_rec_init at 0x3783); six records, stride 0x29
+0xface	0x29	adpcm_a_voice2	ADPCM-A voice record 2
+0xfaf7	0x29	adpcm_a_voice3	ADPCM-A voice record 3
+0xfb20	0x29	adpcm_a_voice4	ADPCM-A voice record 4
+0xfb49	0x29	adpcm_a_voice5	ADPCM-A voice record 5
+0xfb72	0x29	adpcm_a_voice6	ADPCM-A voice record 6
+0xfb9b	0x61	adpcm_b_voice	ADPCM-B voice record (adpcm_b_rec_init at 0x3fe0)
+0xfbfc	0x23	seq_channel1	music sequence channel 1 (0x23-byte record); 14 channels, stride 0x23
+0xfde6	0xa	adpcm_b_seq	historical name retained: shared tempo-control words fde6/fdea, targets fde8/fdec, coefficients fde9/fded, reference fdee and baseline fdef; not an ADPCM-B owner or envelope; consumers4d87..4f68, initializer4fa3
+0xfdf0	2	song_tempo	Shared fractional sequence accumulator: $4e1f adds one/two/three tempo contributions according to $f803 (clamped to three); nonzero high byte emits one logical tick, then is reduced to (H-1)&3 at $4e50; not an underflow countdown.
+0xfdf1	1	song_tempo_reload	Historical name retained: high-byte alias of song_tempo accumulator, not an independent reload; $4e50 stores (H-1)&3 after a logical tick.
+0xfdf2	0x23	drum_channel1	drum_channel1 (current name): first of 8 sequence owners, 0x23 bytes, stride 0x23, started only from start records (0x507b -> 0x50db/0x5251), serviced by 0x514f; drum role unproven (semantic-review-m1-0504e)
+0xff0a	2	drum_slot_ptr	owner chosen by aux_owner_alloc 0x50db (stored 0x512c/0x5135, reloaded at 0x514a); an allocation choice among the 0xfdf2 owners, drum role unproven (semantic-review-m1-0504e)
+0xff0c	1	seq_last_note	historical name retained: commandd9 increments this byte and sends its lowbit in68k reply; not a YM register selector or previous-note operand (53f4)
+0xff0d	2	seq_ptr	current sequence read pointer of the running channel (0x5338/0x5347/0x5734)
+0xfff0	0x10	cmd_ring	16-byte command ring buffer written by the NMI handler (0x1ef9) and read by cmd_queue_pop
+# SSG channel records (voice_rec_init_music layout; 3 channels, stride 0x4c)
+0xf81f	0x4c	ssg_ch1	SSG channel 1 record: voice fields at +0x00..+0x14, sub-records at +0x15/+0x23/+0x31/+0x3f
+0xf86b	0x4c	ssg_ch2	SSG channel 2 record
+0xf8b7	0x4c	ssg_ch3	SSG channel 3 record

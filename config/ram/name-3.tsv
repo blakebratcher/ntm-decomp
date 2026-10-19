@@ -1,0 +1,126 @@
+# Lane name-3 work-RAM and hardware-register names (evidence from the
+# [0x59cf2, 0x63f00) code, its callers/callees and the companion workspace
+# findings).  Format: <hex addr>	<hex size>	<name>	<evidence>
+# Shared globals are also named by other lanes; these are the clearest
+# evidence-based names this lane can justify.
+# --- round / player state -------------------------------------------------
+00107000	2	wind_bias	wind bias 0..7 (3 by default outside a one-player live game), set by wind_bias_set 0x5a210 from the leaderboard rows; wind_setup 0x56e80/0x56eda adds it to difficulty_level; not a strength
+00107002	1	rng_index	byte cursor into the 256-byte table at $568D6, incremented by rng_byte ($568C2); the game's only PRNG
+00107050	26	player_record_snapshot	player_state_save copy of the active record, restored by player_state_restore; first byte $FF when unused
+0010707a	4	hole_record_ptr	pointer to the current hole data block (record +0 of the $57b44 course table entry; hole_load input, stored by hole_load and 0xeb0a): +1 = par (0x5897a, 0x6e428, the 'FOR PAR' banner), +2 = the 8 pin pairs, +6 = the object list, +$12/+$14 = map width/height in cells, 22-byte header, RLE tilemap from +$16; not a 24-byte record (24 is the course-table stride)
+00107086	16	hole_tilemap_desc	+A width cells, +C height cells (row stride for terrain_type_query), +E pointer to the decoded tilemap; +0/+2 get the first/last sprite index of a $18-sprite block (0x584c4, 0x586cc) and +$1a = $21; also used as a render context ($593c0, $58890), so 'tilemap desc' is incomplete
+001070a2	56d6	hole_tilemap	Decoded column-major hole tilemap at 0x1070a2; tilemap_rle_decode 0x5a428 writes width*height words. All 72 ROM maps validate; maximum course index 0, hole index 17 (18th hole) is 57*195 words ($56d6 bytes). ball_state_base 0x108100 is an interior address alias, not a separate allocation.
+00107014	18	scorecard_p1	18 per-hole result bytes ($FF unplayed, 1/2 counted by match_play_standing), cleared by scorecard_clear
+0010703a	18	scorecard_p2	P2 scorecard, same format
+# --- mode / global flags ---------------------------------------------------
+00102eb8	1	difficulty_level	seeded from the soft DIP DIFFICULTY $10fd8e at 0xe56e (LEVEL 1..8 = 0..7); also written by the AES-only (BIOS_MVS_FLAG == 0) difficulty select 0x86070 from table 0x863ac: EASY 0, NORMAL 3, HARD 7, MVS 4; acts as a difficulty term in 0x5a9a2/0x5aa9a, the computer scores 0x83ba2 and wind_setup; 'hole conditions' is unproven (semantic-review-p1-844f8)
+00102eb9	1	start_join_lock	nonzero restricts the PLAYER_START handler to players at the continue prompt (0xe268); bit 7 set at each ball stop outside an attract demo (0x5adfc) and by the round/scorecard entries (e.g. 0xea1a, 0xeb4a, 0xecae, 0xed94); $ff at shot-clock time up (0x57774); 0x58286 stores $ff when hole_number >= $12 and 0 otherwise; cleared at 0xe80a/0xe8e8/0xe9b6; read by 0x603c0
+00102ebb	1	attract_demo_index	attract-demo index: 0 = live game (no demo), 1..4 = the four attract demos, 5 = the how-to-play demo after START. Writers (root flow 0x100160, ROM PCs in the 0xe558 code inside row p1_e4e8_palette_stream_strings): 0xe5b6 move.b d0 (1..4 = (attract_demo_cycle+1)&3 +1, after 0xe5ae stores the cycle back), 0xe72c move.b #5 (how-to-play after START), clr.b at 0xe6aa, 0xe7a8 and 0xe828 (post_start_mode_select). Readers: attract_round_setup 0xf22e ((v-1)&7 into the $f2d0 golfer, $f2ea course/hole and $f2d6 tee tables), 0x6b848 ((v-1)&3 demo input block via 0x8500e), hole_complete_check 0x58aee (nonzero -> no carry), input routing 0xf1ee (nonzero -> P1 input), ball_hole_out_event 0xbc78, player_start_handler 0xe33c, cmpi.b #5 how-to-play overlays 0x56730/0x583de/0x5869a/0x6db02/0x6dc66. MAME write taps (docs/lanes/hole-play.md): 1..4 cycle across demos, 5 at START, 0 after the A that skips how-to-play
+00102ebf	1	player_state_pending	bit 7 set by hole_load (0x5a152); while nonzero player_state_save first re-increments the player's +$44 hole stock (undoing hole_load's decrement); cleared by player_state_save/restore and 0xe834
+00102eb0	4	resume_hook	resume PC of the root flow: $e8d4/$e968 (golfer/course select), $ea10 (pre-round, game_mode != 2), $eca4 (scorecard); jmp (a0) at 0xeca2/0xee6e; saved to $102eb4 by player_state_save, restored or set to $e968 by player_state_restore
+00102eb4	4	resume_hook_saved	player_state_save copy of resume_hook
+00102eac	2	lspc_mode_word	word written to REG_LSPCMODE ($3C0006) by the IRQ handler and the wipe hooks: $30xx/$50xx/$90xx with the display mode in the low byte (lspc_mode_set sets it)
+00102ea8	4	raster_hook	raster hook PC: initialised to the bare rts $e43e by user_entry 0xe36e; called only by the level-2 (raster/timer) handler 0xe41c (jsr (a0)); screen_hook_install_63b5e and the wipe chain swap it
+# --- ball physics globals --------------------------------------------------
+00102c68	4	ball_x	ball position 16.16 (FINDINGS: pos += v>>4 each frame); written by the ball actor and the turf-lie code
+00102c6c	4	ball_y	ball position 16.16 y
+00102c70	4	ball_z	ball height 16.16, published by ball_publish_state
+00102ca8	4	wind_vector_x	sin(wind_direction $10d4d7 << 9), 16.16 (12-bit turns, 45-deg steps) from wind_random_set 0x5a286; used by the roll push $b0c4 (gated by $10d4d6); unrelated to $106fe0/$106fe2
+00102cac	4	wind_vector_y	-cos(wind_direction $10d4d7 << 9), 16.16, from wind_random_set 0x5a286; pair of $102ca8; used by the roll push $b0c4 (gated by $10d4d6)
+00102cd6	2	ball_surface_word	ball/ground contact word: cleared by ball_stopped_state, set by the terrain code (FINDINGS: 0x102CD0 surface type)
+# --- HUD / distances -------------------------------------------------------
+0010d4ac	2	shot_distance_word	shot distance as displayed: shot_distance_calc already shifts |ball - origin| by 2, same scale as target_distance >> 2; not "4x-yard units" (semantic-review-p1-54c3c, semantic-review-p1-0cad2)
+# --- course / hole ---------------------------------------------------------
+0010d4c0	2	course_obstacle_type	per-course object type $a/5/5/4 (word table $5a194[course] read by hole_load at 0x5a18a), equal to each course's obstacle record type; selects the obstacle kind at 0x7d96, the panel strip at 0x809c0 and the palette at 0x6a058; not a tee offset
+0010d4c6	4	pin_x_16_16	pin x in 16.16 (pin_position_set)
+0010d4ca	4	pin_y_16_16	pin y in 16.16
+0010d4ce	4	flag_object_height	0x5929a height at the first type-0 object (near the pin pairs), << 10 (swap, clear the low word, asr.l #6 at 0x5a176; hole_load)
+0010d4d4	2	hole_band_hi	upper edge of the hole band: map-unit y range from table $5a1dc (courses/holes 0/2, 0/12, 2/4, 2/17, 3/8, 3/11; $ffff elsewhere), read by ball_band_hide_check, terrain_type_query (surface 7) and 0x5929a; water-crossing y band on G.CANYON 2/12, FUJIYAMA 4/17, SEASIDE 8/11: ground_height_query returns -$d55 except on $12af cells (semantic-settle-round-flow).
+0010d4d7	1	wind_direction	0..7 (wind_random_set)
+0010d4d8	2	tee_x_word	tee x word in map units (16 per cell), from object type 7 (tee_position_set 0x5a3a6); not a cell index
+0010d4da	2	tee_y_word	tee y word in map units (16 per cell), from object type 7 (tee_position_set 0x5a3a6)
+0010d4dc	2	course_x_limit	upper x clamp: (map width cells - 2) * 16 - 1 in map units (hole_load 0x5a0fe); used with the lower clamp $20 by ball_clamp_bounds 0x5b1a0 and by 0x7545e
+0010d4de	2	course_y_limit	upper y clamp: (map height cells - 2) * 16 - 1 in map units (hole_load 0x5a104); used by ball_clamp_bounds 0x5b1a0
+# --- shot bookkeeping ------------------------------------------------------
+0010d4e0	4	contest_hole_list	the round's contest holes (4 bytes, packed by 0x5aa9a): +n = longest-drive hole n, -n = nearest-pin hole n; read by 0x5aa76; not an attract plan
+0010d4ed	1	shot_result_flag	cleared by hole_load (hole result bookkeeping with $10D4EE/EF)
+0010d4ee	1	match_playoff_flag	match-play playoff flag: bit 7 set at 0xed72 when game_mode 2 is all square after hole 18 (round_player_init restarts from hole 1); while set, match_play_standing 0x5abec reports the first won or lost hole as decided; cleared only at 0xe8f6 (golfer select)
+0010d4ef	1	wind_panel_shown	set by the wind panel 0x75734 after its slide-in, cleared by hole_load; when set the panel skips the slide
+0010d4f0	4	shot_origin_x	ball position 16.16 latched when the shot starts (ball_actor_setup); the shot-distance HUD and FUN_0006E356 subtract it
+0010d4f4	4	shot_origin_y	shot origin y 16.16; 0x5b3ba starts the relocation search from shot_origin_x/y when ball_lie_copy is 5/7/8; ball_pos_restore 0x588f6 restores it
+0010d4fc	4	shot_origin_saved_x	relocation target x saved at 0x5b390 (ball_lie_copy 5/7/8, shot_kind != 0); ball_pos_restore 0x588f6 uses it instead of shot_origin when nonzero; cleared at 0x582c4
+0010d500	4	shot_origin_saved_y	relocation target y, pair of 0x10d4fc (0x5b390, 0x588f6, cleared at 0x582c4)
+0010d510	1	ball_hold_timer	countdown that freezes the ball actor (ball_actor_setup/ball_stopped_state)
+0010d512	1	ball_relocate_busy	relocation busy flag: shot_result_task sets $ff (0x6c190/0x6c32a) and waits for 0; the slide 0x5b28c waits for nonzero; 0x5b33a clears it
+# --- input -----------------------------------------------------------------
+00100001	1	dev_flags_lo	low byte of dev_flags $100000 (only ever cleared: 0xe230, 0xe3c2/0xe3cc, 0xe4de): bit 1 gates wind_nudge_input 0x55640, bit 3 tested by 0x5b0f0
+# --- per-player round state ------------------------------------------------
+# --- hole map / markers ----------------------------------------------------
+0010d5f0	1	green_map_flag	bit 7 set when green_marker_draw_a/b/c drew or patched (per-frame dirty flag)
+0010d5f1	1	green_tiles_flag	bit 7 set by green_marker_flag/hole_map_overlay_draw (map rows patched)
+0010d5f2	1	marker_flag_bits	bit 7 set by marker_y_offset for flag-type markers
+0010d5f3	1	marker_index	distance-marker index (distance_marker_begin/scan)
+0010d5f4	2	marker_pos_a	first marker bracket position (distance_marker_range -> displayed by pin_marker_draw)
+0010d5f6	2	marker_pos_b	second bracket position
+0010d5f8	2	marker_dist_a	marker distance A (seeded $6F; selects the marker sprite stream at $5D/$55/$4D)
+0010d5fa	2	marker_dist_b	marker distance B (seeded $63)
+0010d5fc	2	wipe_span_a	first screen-wipe row span (hole_wipe_span_calc)
+0010d5fe	2	wipe_span_b	second span
+0010d600	2	wipe_span_c	third span
+0010d602	2	wipe_span_d	fourth span (selects the wipe table)
+0010d604	2	wipe_span_e	fifth span
+0010d606	2	map_base_x	hole-map x origin (sprite_map_blit calls)
+0010d608	2	map_base_x2	second hole-map x origin (left half)
+0010d60a	2	pin_blend_state	pin marker blend state 0..3 (pin_marker_blend/green_front_bar_draw)
+0010d60c	2	vram_window_a	VRAM address written by hole_screen_activate
+0010d60e	2	vram_window_b	second VRAM address (restored by the wipe hook)
+0010d610	2	vram_window_c	third VRAM address (cleared by the wipe hook)
+0010d612	4	vram_source_pair	stored VRAMADDR/VRAMRW long pair flushed by the wipe tail
+0010d616	2	wipe_rows_a	wipe row count (from the map width)
+0010d618	2	wipe_rows_b	second wipe row count
+0010d61a	2	wipe_countdown	countdown for the current wipe step; in 0x6e81a/0x6e86e it counts scanline IRQs (64), not vblanks (semantic-review-p1-6d55e)
+0010d61c	2	wipe_countdown_b	second countdown (step B)
+0010d61e	4	wipe_source_ptr	cursor into the staged wipe rows (advanced 4 per line)
+0010d620	2	wipe_cursor	the VRAM cursor value written each step
+0010d622	4	wipe_hook_slot	RAM-installed wipe hook PC (copied into raster_hook by screen_hook_install_63b5e)
+0010d626	2	wipe_hook_count	count loaded into wipe_countdown by the installer
+0010d628	4	wipe_table_ptr	selected wipe table/step pointer
+0010d62c	256	wipe_rows	screen-wipe row staging (64 longs), copied to vram_stage_rows each tick
+0010d730	256	vram_stage_rows	the rows streamed to VRAM by the wipe hooks (also the first tile-row buffer cleared by hole_screen_activate)
+0010d834	2	marker_actor_budget	how many marker actors may still be spawned
+0010d836	2	marker_cell_x	marker cell x used by pin_marker_draw
+0010d838	2	marker_cell_y	marker cell y
+0010d83a	4	green_slope	green slope magnitude (cup_grid_slope_calc), -$80000000 when unset
+0010d83e	1	pin_blend_flag_a	first pin marker pair was live (pin_marker_blend)
+0010d83f	1	pin_blend_flag_b	second pair was live
+0010d840	312	cup_grid	52-entry cup grid built from the hole record +$E list: 3 words (projected x, y, flag) per entry
+0010d972	8	cup_extent_a	cup-grid extent 0, one of three 8-byte records {low, high, lowflags, highflags} at 0x10d972/0x10d97a/0x10d982 (0x62ad6 steps them by 8, 0x62b06 writes +0/+2/+4/+6) with the $7FFF/$8000/0 empty sentinels (semantic-review-p1-61620)
+0010d982	8	cup_extent_b	cup-grid extent 2 (third 8-byte {low, high, lowflags, highflags} record stepped by 0x62ad6; extent 1 is 0x10d97a), pin_marker_blend averages it with extent 0 (semantic-review-p1-61620)
+0010d992	4	cup_extent_scale	scale pair used by cup_grid_extent_update
+0010d996	2016	fix_row_buffer	56 rows x 9 cells of {u16 tile, u16 attr} - the fix-layer map the hole screen draws and the wipe streams to VRAM
+0010d998	2	fix_row_attr0	First cell attribute: hole_map_palette_remap $63638 walks $10d998+4*n for n=0..503, patching the palette high byte of every fix_row_buffer cell in place.
+0010e176	2016	sprite_map_buffer	the sprite-map mirror of the fix rows, 56 rows x 9 cells of {u16 tile, u16 attr} like fix_row_buffer: the shared guard at 0x6418a admits row < $38 for both buffers, and 0x10e176 + $7e0 = 0x10e956 (strip_cell_x); sprite_map_blit_entry writes it, hole_map_row_blit/overlay_draw/0x6417a read it (semantic-review-p1-61620)
+0010e95a	2	hole_strip_state	1/2/3 hole-strip state (hole_strip_state)
+0010e956	2	strip_cell_x	in state 2: extent 0 low >> 4 (0x62794), used as a fix_row_buffer row index by 0x65a06/0x65aaa/0x65b8c; not an x coordinate (semantic-review-p1-61620)
+0010e958	2	strip_cell_y	in state 2: extent 0 high >> 4 (0x62794), used as a fix_row_buffer row index by 0x65a06/0x65aaa/0x65b8c; not a y coordinate (semantic-review-p1-61620)
+0010e95c	540	hole_marker_list	45 (max $2d) 12-byte marker records {ptr, 16.16 x-or-marker_depth, 16.16 y-or-object_depth}. green_object_scan writes full longs; type-8 hole_marker_list_add $61a9a writes only their integer words, retaining stale fractions. Records beyond marker_list_count retain earlier builds or pruned ptr=-1; hole_marker_sort $62304 reads record 1 even when count=1 (semantic-settle-course-a/b).
+0010eb78	4	marker_list_cursor	write cursor into hole_marker_list (reset to $10E95C by hole_screen_build)
+0010eb7c	2	marker_list_count	current entry count (max $2D)
+0010eb7e	4	nearest_object_ptr	Long pointer to nearest type-6 mound object by |dx|+|dy| (nearest_mound_find $621ec); -1 unless player record +$c ground-height word is nonzero and a qualifying type-6 object is found. Its sign selects wipe/marker paths; type 6 is raised ground, not a pin/flag.
+0010eb82	4	object_sq_length	squared length of the player->object vector (mound_far_edge_row)
+0010eb86	2	flag_screen_x	Screen y of the far edge of the nearest type-6 mound: mound_edge_y_set $62266 stores $139 + max($20, projected scalar 0..$6f), range $159..$1a8. Consumers use ($1a8-value)/2 as the wipe_rows_a raster cutoff ($6367e, hole_wipe_span_calc); historical name is not an x coordinate.
+0010eb88	2	wipe_column	SCB4 X offset added to sprite 1 by hole_wipe_hook_b on courses 2/3; hole_wipe_dir_set $638b8 advances +$10 per tick for view-relative wind bands 0..7, -$10 for 8..$f.
+0010eb8a	4	pin_marker_table	selected pin marker stream table (pin_marker_set)
+0010eb8e	4	wipe_hook_slot2	second RAM wipe-hook slot (hole_map_flag_draw installs $63988)
+0010eb92	2	build_progress_tag	$7701..$7719 tag left by hole_screen_build as each builder completes
+0010eb94	4	marker_depth	marker depth in the cup frame (green_object_scan)
+0010eb98	4	object_depth	object depth used by the green-marker accept tests
+0010eb9c	4	view_axis_x	first world axis of the hole view (atan2_12bit input, cup frame rotation); unit vector ball -> target written by $bcc8
+0010eba0	4	view_axis_y	second world axis; its sign selects the marker side everywhere in the hole-map code; unit vector ball -> target written by $bcc8
+0010eba4	4	cup_frame_offset_x	cup_local_x offset (cup_axis_calc)
+0010eba8	4	cup_frame_offset_y	cup_local_y offset
+0010ebca	1	marker_anim_phase	0..2 phase index of a marker animation, stepped by 0x6e032, cleared by round_player_init 0x59f26; contest_holes_pick never reads or writes it
+0010ebce	2	vram_source_a	LSPC timer reload low word, written to REG_TIMERLOW by 0x6e86e, 0x63c8c and 0x6367e; not a per-course VRAM source word (semantic-review-p1-6d55e)
+0010ebd2	2	vram_source_b	second VRAM source word
+0010ebd4	2	vram_source_c	third VRAM source word
+# --- hardware registers ----------------------------------------------------

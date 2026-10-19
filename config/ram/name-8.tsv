@@ -1,0 +1,45 @@
+# name-8 lane work-RAM names, P1 fixed half [0x7e540, 0x100000).
+# <hex addr>	<hex size>	<name>	<evidence>
+00100003	0001	seq_free_run_counter	not free-running: incremented once per spawn of 0x7eb1a (sole writer) and picks the 18-byte record of table 0x7f878 ((counter>>3)&3 when counter % 8 == 0, else 0) (semantic-review-p1-7e726)
+001000d2	0002	sound_cmd_pending	COIN_SOUND pending word (M1 byte $0f, 0x2156): set by the cart vector 0x134 handler 0x8044a, cleared by the vblank drain 0x803f6 (tests == 1) and by 0x802b4 (before SYSTEM_RETURN at 0xe3d4) (semantic-review-p1-7fca6)
+00102ec2	0028	palette_free_ring	ring of free hardware palette slot ids (0x28 entries); alloc takes at 0x102fc4, free pushes at 0x102fc6
+00102fc2	0002	palette_free_count	number of free palette slots (0x28 when idle)
+00102fc4	0002	palette_free_alloc_cursor	Read cursor into palette free ring, advanced by palette_slot_alloc $b9a22 and palette_slot_alloc_force $b9b4c; wraps at $28.
+00102fc6	0002	palette_free_push_cursor	write cursor into the free ring, advanced by palette_slot_free 0xb9d20
+00102fc8	0d00	palette_slot_records	0x68 records of 32 bytes (0x102fc8 + slot*0x20): +0 flags (bit0 in use, bit1 animated, bit2 pinned, bit3 skip-upload, bit7 free), +2 long source palette, +6 refcount, +8 anim period, +a long anim target, +e anim step, +f anim direction, +10 anim counter
+00104fc8	0001	palette_fade_active	fade control byte: 1 = fade in/out stepping, 0x80 = fade-to-colour active, -1 = the second ramp variant (palette_fade_step_ca55e routes -1 to palette_fade_optional_ca766; written by the entries 0xb974c/0xb97de); bit set by the fade actors and the driver 0xb9de6
+00104fc9	0001	palette_dirty_flag1	palette shadow dirty flag 1, cleared by the shadow reset (0xb99ae)
+00104fca	0001	palette_dirty_flag2	per-channel fade level (attenuation index 0..$1f into the LUT of 0xca6fc) for the D2 channel, set by 0x7fb2a, 0x7fab8 and 0x7fd7e; not a dirty flag (semantic-review-p1-7fca6)
+00104fcb	0001	palette_dirty_flag3	per-channel fade level 0..$1f (0xca6fc LUT) for the D3 channel; set by 0x7fb2a, 0x7fab8, 0x7fd7e; not a dirty flag (semantic-review-p1-7fca6)
+00104fcc	0001	palette_dirty_flag4	per-channel fade level 0..$1f (0xca6fc LUT) for the D4 channel; set by 0x7fb2a, 0x7fab8, 0x7fd7e; not a dirty flag (semantic-review-p1-7fca6)
+00104fcd	0001	palette_update_pending	set by the driver 0xb9de6 when it must redo a second pass over the slots
+00104fce	0001	palette_upload_pending	set by the driver 0xb9de6 when a slot became dirty; read and omitted by palette_upload 0xca892
+00104fd1	0001	palette_wipe_counter	palette-RAM block wipe counter, wrapped by 0xca934 and tested by 0xca986
+00104fd2	1fe0	palette_shadow	hardware palette shadow: 32 bytes per slot (0x68 slots in the upload loop), word 0 of a slot doubles as its dirty flag; the backdrop entry lives at +0x1fe0
+0010ecb4	0001	course_intro_step	staff roll step 0..8: indexes the 6-byte step table 0x7ff4c and the 9-entry sprite-script table 0x7ffee; incremented by 0x7fa10, cleared by 0x7fb2a; the staff roll (0x7f93c) is spawned by results_sequence_actor 0x74946 (semantic-review-p1-7e726)
+0010ecb6	0020	sound_cmd_queue	32-byte command ring to the audio Z80, written by sound_cmd_putc 0x802de and drained one byte per vblank by 0x803f6 to the latch 0x320000
+0010ecd6	0002	sound_cmd_queue_tail	ring tail index (read side), advanced by the vblank drain 0x803f6
+0010ecd8	0002	sound_cmd_queue_head	ring head index (write side), advanced by sound_cmd_putc 0x802de
+0010ecda	0001	sound_cmd_last_reply	last byte read from the audio latch 0x320000, decoded by 0x803ce
+0010ecdb	0001	sound_cmd_prev_reply	previous reply byte, so 0x803ce reports each reply once
+0010ecdc	0001	sound_cmd_suppress	message suppress flag: while set, codes >= 0x1000 are dropped (set/cleared by the two setters at 0x803bc/0x803c6)
+0010ecde	0001	sound_cmd_last_char	last character pushed, used to drop repeated control bytes; 0xff marks a full ring
+0010eea2	0080	card_record	0x80-byte memory-card record read/written through the BIOS card calls (commands 2/3 at 0x10fdc4); cleared by 0x840d8, filled from 0x10ef3e.. by the card screen 0x854a8
+0010eeb7	0001	card_golfer_index	saved course index on the card: indexes the course-name table 0x863b0 (USA/GERMANY/JAPAN/AUSTRALIA) drawn by 0x85812; not a golfer index (semantic-review-p1-844f8)
+0010eeb8	0001	card_present_state	memory-card screen state byte (0 = no data / empty record path)
+0010eeb9	0001	card_name_index	golfer type index on the card (0..5 meaningful): indexes 0x8640a (YOUNG HERO .. TECHNICIAN) drawn by 0x85812; not a name index (semantic-review-p1-844f8)
+0010eed6	0001	card_score_byte	signed score byte drawn by 0x85812
+0010ef22	0008	input_state_p1	P1 input state: {u8 prev, u8 cur, u8 edges, u8 pressed, u8 repeat timer, u8 pad, u8 pad}: filled from the BIOS latch 0x10fd96 (or the demo stream) by the sampler 0x85086
+0010ef28	0008	input_state_p2	P2 input state, same layout, fed from 0x10fd9c
+0010ef2e	0002	demo_input_bytes	synthetic input bytes the demo plays back into (P1, P2)
+0010ef30	0004	demo_stream_ptr	pointer to the 0x200-byte recorded input stream (0x10ef30 + 4..)
+0010ef34	0002	demo_play_cursor	demo playback cursor into the recorded stream
+0010ef36	0002	demo_write_cursor	demo recording write cursor into the recorded stream
+0010ef38	0001	demo_pending_nibble	nibble being assembled during recording/playback
+0010ef3a	0002	input_repeat_word	auto-repeat word: high byte 0x10ef3a = initial delay, low byte 0x10ef3b = repeat period in vblanks
+0010ef3c	0001	input_source	input source: 0 = real ports, 1 = demo playback, 2 = stopped
+0010ef3e	0004	result_prize	cumulative round score in 1/256 units (long): copied between card_record, the actor and RAM, cleared by 0x840d8/0x83e28, accumulated by 0x85f1c (+<= $ff00 per round); divided by 0x10ef42 when printed by 0x85c90; not a prize (semantic-review-p1-844f8)
+0010ef42	0002	result_prize_divisor	completed-round count (+1 per round in 0x85f1c), the divisor of 0x10ef3e in 0x85c90 (clamped to 0x3e7 when printed); not a hole count (semantic-review-p1-844f8)
+0010ef44	0002	result_holes	holes-played counter shown by 0x85d9c (clamped to 0x63)
+0010ef46	0001	result_best_score	best (lowest) score of the round, shown by 0x85d2c; 0x7f = none
+0010ef47	0001	result_best_rank	best rank of the round, shown by 0x85dc4; 0 = none

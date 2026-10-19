@@ -1,0 +1,21 @@
+# P1 fixed range [0x00f4fa, 0x054c3c): course data (4 courses x 18 hole
+# records + per-course trailing RLE/lists) and the trig tables.  Decoded and
+# parser-validated by the p1-fixdata lane; full write-up and consumer map in
+# the private lane report
+#
+# Course data: records reached via the course directory at 0x57b44 (walked by
+# FUN_00058988 @0x58988: 4 course tables x 18 entries x 24 bytes, entry long
+# 0 = record address).  Each record: 22-byte header (flags, par, 4 pointers,
+# width, height cells) + RLE tilemap that FUN_0005a054 @0x5a054 decodes via
+# FUN_0005a428 @0x5a428 into exactly width*height words, plus object lists
+# (FUN_00002d8a @0x2d8a), pair lists (FUN_00062a4a @0x62a4a) and coord
+# blocks (FUN_00061b16 @0x61b16, FUN_0005a31c @0x5a31c).
+# tools/lane_fixdata_tables.py validates all 72 records: header fields, RLE
+# decodes == w*h for 72/72, every sub-list tiles to the next record, and the
+# four course blocks tile the span exactly.
+# Format: <hex start>  <hex size>  <kind>  <name>  <evidence>
+00f4fa	01156a	data	course2_holes	18 distinct hole data blocks of course table 0x580ac (p1_57b44_ptr_table[2]; hole_record_load 0x5893a and hole_par_lookup 0x58988 index entries 1..18, entry 0 repeats entry 1; hole 18 = 0x1fc32): 22-byte header {flags, par, +2 pin pairs, +6 objects, +$a search list, +$e pair list, +$12/+$14 width/height}, RLE map that 0x5a428 (hole_load 0x5a054) decodes to exactly width*height words, then the object list (0x2d8a, $ffff end), search list + 8 pin pairs (0x61b16, 0x5a31c) and pair list (0x62a4a, zero end); the 18 blocks tile [0xf4fa,0x20a64) exactly, pars total 72 (tools/semantic_p1_assets_holes.py)
+020a64	012a92	data	course0_holes	18 distinct hole data blocks of course table 0x57b54 (p1_57b44_ptr_table[0]; hole_record_load 0x5893a and hole_par_lookup 0x58988 index entries 1..18, entry 0 repeats entry 1; hole 18 = 0x328e2): 22-byte header {flags, par, +2 pin pairs, +6 objects, +$a search list, +$e pair list, +$12/+$14 width/height}, RLE map that 0x5a428 (hole_load 0x5a054) decodes to exactly width*height words, then the object list (0x2d8a, $ffff end), search list + 8 pin pairs (0x61b16, 0x5a31c) and pair list (0x62a4a, zero end); the 18 blocks tile [0x20a64,0x334f6) exactly, pars total 72 (tools/semantic_p1_assets_holes.py)
+0334f6	01185e	data	course3_holes	18 distinct hole data blocks of course table 0x57d1c (p1_57b44_ptr_table[3]; hole_record_load 0x5893a and hole_par_lookup 0x58988 index entries 1..18, entry 0 repeats entry 1; hole 18 = 0x43ea6): 22-byte header {flags, par, +2 pin pairs, +6 objects, +$a search list, +$e pair list, +$12/+$14 width/height}, RLE map that 0x5a428 (hole_load 0x5a054) decodes to exactly width*height words, then the object list (0x2d8a, $ffff end), search list + 8 pin pairs (0x61b16, 0x5a31c) and pair list (0x62a4a, zero end); the 18 blocks tile [0x334f6,0x44d54) exactly, pars total 72 (tools/semantic_p1_assets_holes.py)
+044d54	00fc68	data	course1_holes	18 distinct hole data blocks of course table 0x57ee4 (p1_57b44_ptr_table[1]; hole_record_load 0x5893a and hole_par_lookup 0x58988 index entries 1..18, entry 0 repeats entry 1; hole 18 = 0x53962): 22-byte header {flags, par, +2 pin pairs, +6 objects, +$a search list, +$e pair list, +$12/+$14 width/height}, RLE map that 0x5a428 (hole_load 0x5a054) decodes to exactly width*height words, then the object list (0x2d8a, $ffff end), search list + 8 pin pairs (0x61b16, 0x5a31c) and pair list (0x62a4a, zero end); the 18 blocks tile [0x44d54,0x549bc) exactly, pars total 72 (tools/semantic_p1_assets_holes.py)
+0549bc	000280	data	trig_tables	one 320-word sine table, word k = round(sin(k*pi/128)*256) for k = 0..319 (exact): 0x6cecc (lea $549bc) reads words 0..255 (andi #$ff) and clamps |v| to 255; polar_offset_xy 0x7af54 reads base+$80 (cosine) and base (sine) at angle*2; 0x79e66 reads base+$80 at a byte offset <= $ff; the 64-word overlap makes cos(a) = word a+64 valid for a = 0..255 (tools/lane_fixdata_tables.py --trig)

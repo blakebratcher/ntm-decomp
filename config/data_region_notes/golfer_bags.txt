@@ -1,0 +1,6 @@
+; 6 golfer pointers to 14 club entries {u16 distance_x4, u16 club_type}, 0x8318e-0x832f6
+; Indexed by golfer id (player record +1) then bag index 0..13 (entry 13, the
+; putter, distance $70). Readers: club_hud_draw 0x55c74 (+2 type, +0 / 4 ->
+; displayed distance), 0x55d64 (+0 vs target_distance), club_icon_draw
+; 0x561a0 and 0x5609e (+2 type), 0x5a9a2 (+0 of entry 0), 0x72638, 0x751ec,
+; bag_get_club 0x80f56 (+2 type).

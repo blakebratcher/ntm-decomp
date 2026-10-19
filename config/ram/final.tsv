@@ -1,0 +1,3 @@
+# Final reconstruction pass RAM names (the private lane report).
+# <hex addr>	<hex size>	<name>	<evidence>
+00106ffe	0002	border_wipe_index	step index of the unref fix_border_wipe_step ($56dd0): -1 idle, 0..15 the ring being drawn; used nowhere else in either image

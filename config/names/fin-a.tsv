@@ -1,0 +1,4 @@
+05b510	other_ball_actor	draws the other player's ball (spawned by ball_actor_setup via lea ($5b510,PC),a1 at 0x5ac74 + jsr $4c6 at 0x5ac78 when game_mode != 0): our ball's screen pos 0x10d4f8/fa plus the map offset to the other record's +4/+8, terrain_type_query at the other ball; gate shot_kind == 1; surface $b with +3 set -> frame $9537c, palette $41
+05b0ea	ball_draw_on_ground	jmp ($5b0ea,PC) at 0x5b5ea (0x5b510): d1 = 1 forces ball_draw's on-ground path at 0x5b042; no landed-frame flag
+0567b2	number_draw_8_blank	parallel 8-digit entry of number_draw_4_blank: d2=$1c/d3=8 then bra into the shared loop at $567ce; no known caller
+0578ce	level_select_heading_init	LEVEL SELECT heading init, spawned by the option-selector screen (lea $578ce.l,a1 at 0x86050 + jsr $4c6 at 0x86056): palette $106, y $1d0, sweep x +$40 = -$78, priority +$3c = 1; falls into 0x578f0; not a scorecard

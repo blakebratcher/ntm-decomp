@@ -1,0 +1,10 @@
+# finish lane RAM table (variables named while documenting the p1-residue blocks).
+# <hex addr>	<hex size>	<name>	<evidence note>
+# Merged with the other config/ram/*.tsv by tools/symbols.py.  The other
+# input-snapshot bytes are already named by earlier lanes (input_held_p1 =
+# the 0x10d514 word, input_edges_p2 = the 0x10d520 word).
+00102084	4	bios_task_cursor	written by actor_main_loop (0x5b4): the BIOS task-node list cursor (points into the 0x100100 task_node_main list)
+00102ce0	4	deflect_vel_x_shr4	ball_collision_deflect_hard: ball_vel_x (already halved) >> 4, stored at $842c and read back at $845a as the x factor of the side-of-obstacle cross product (math_mul_fixed with ball_y - ball_anchor_y); no other user in the corpus
+00102ce4	4	deflect_vel_y_shr4	ball_collision_deflect_hard: ball_vel_y (already halved) >> 4, stored at $843a and read back at $8440 as the y factor of the cross product (math_mul_fixed with ball_x - ball_anchor_x); no other user in the corpus
+0010fd8e	1	soft_dip_difficulty	BIOS_GAME_DIP+$a, soft DIP list 5 'DIFFICULTY' (LEVEL 1..8 = 0..7): root_attract_title_flow copies it into $102eb8 at $e56e (move.b ($10fd8e).l,(difficulty_level).l)
+0010fd90	1	soft_dip_play_manual	BIOS_GAME_DIP+$c, soft DIP list 7 'PLAY MANUAL' (0 = ON, 1 = OFF): with BIOS_MVS_FLAG set, nonzero skips the how-to-play demo (tst.b at $e702, bne to $e790 in root_attract_title_flow)

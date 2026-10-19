@@ -1,0 +1,12 @@
+# name-5 lane RAM names: work RAM read/written by the fixed-P1 sources in
+# [0x6cef0, 0x72b96) (title/ending, shot scene, VS/select screens, HUD fix
+# layers, swing meters).  Rows <hex addr>	<hex size>	<name>	<evidence>.
+102ead	1	raster_irq_enable	low byte of lspc_mode_word: the REG_LSPCMODE timer control bits ($20/$50/$30/$90) written before each 0x3c0006 mode write by 0x6e4c6/0x6e81a/0x6e86e (semantic-review-p1-6d55e)
+10ebc4	1	scene_flags_b	bit 7 = one-shot announce flag raised by 0x6d44a; cleared every frame of the wait at 0x6bf06 (the second entry of shot_result_task 0x6bee6), not by a title machine (semantic-review-p1-6b9dc)
+10ebcc	2	marker_offset_anim	x offset published by 0x6e032: the x of strip entry 0, 3 or 6 (phase 0x10ebca), subtracted from every entry's x in 0x6dd50 (semantic-review-p1-6d55e)
+10ebd0	2	raster_line_hi	LSPC timer reload high word, written to 0x3c0008 (REG_TIMERHIGH) (semantic-review-p1-6d55e)
+10ebd6	4	shadow_pos_cache	cache of putt_along_aim 0x102cf2 compared by 0x6ecb4 (putt_along_heading runs when they are equal); not a position (semantic-review-p1-6eb46)
+10ebda	4	camera_scale_10ebda	ball height term (ball_z - flag_object_height) << 6 * $efb3, written and read only by 0x6dbac; not a projection scale (semantic-review-p1-6d55e)
+10ebde	2	vs_slide_offset	VS screen slide offset moved by 0x6f154 and added in 0x6f5b2
+10ebe0	2	vs_slide_bound	VS screen slide bound, decremented every two bounces by 0x6f154
+10fd8b	1	soft_dip_hole_penalty	BIOS_GAME_DIP+7, soft DIP list 2 'HOLE PENALTY' (BOGEY / PAR / GIVE UP / NO PENALTY); 0x6d49c maps it to the class {1,0,4,$b} (table 0x6d4ac) used by 0x6d55e and the hole-result code 0x7c7d6

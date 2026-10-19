@@ -1,0 +1,39 @@
+# name-2 lane RAM symbols: work-RAM variables and BIOS exchange bytes seen by the
+# sources in [0xd54a, 0x59cf2). Format: <hex addr>	<hex size>	<name>	<evidence>
+# Evidence is the consumer/writer instruction(s); see docs/subsystems/name-2.md.
+100002	1	attract_demo_cycle	attract-demo cycle counter: the root flow reads it at 0xe5a2, stores (v+1)&3 back at 0xe5ae and writes that +1 to attract_demo_index at 0xe5b6; set to $ff at 0xe3e0 before the jmp to the BIOS entry $c00444, so the first demo after a return is index 1 (MAME: 1, 2, 3, 4 across successive demos, docs/lanes/hole-play.md)
+100160	60	start_actor_slot	static root-flow actor slot: start_latch_consume $d6c4 frees its descendants/palette slots via $598/$ca6d8 and re-points its handler at challenger_join_enter $ef7e
+102080	4	actor_free_list	actor free-list head built by actor_pool_init ($428) and popped by actor_alloc ($4c6)
+102e58	1	challenger_request	2P challenger re-entry request: player_start_handler sets $ff at 0xe362 only when both players are playing, attract_demo_index == 0 and game_mode == 0 (0xe33c-0xe35a); start_latch_consume 0xd6c4 tests and clears it, releases the root actor 0x100160 children and re-points it at 0xef7e, which sets game_mode = 2 at 0xefd8 (MAME: docs/lanes/hole-play.md, CHALLENGER)
+102e60	40	task_table	8 x {handler, actor} entries filled by task_schedule ($d510) and ticked by task_dispatch ($d4c8)
+102ea0	1	task_cursor	task_dispatch round-robin cursor (0..7) at $d4ce
+102ea1	1	task_head	task_schedule write index at $d510
+102ea4	1	start_block_a	latch set to $ff by start_credit_trigger ($d926), cleared by start_block_clear ($d9d4)
+102ea5	1	start_block_b	companion byte of $102ea4 (cleared by $d926 and $d9d4)
+102ea6	1	start_block_release_flag	set $ff by $d9e2, cleared by $d9d4/$d9ec and by the title/round state machines
+102ec0	1	sound_2a_latch	bit 7 makes sound $2a play once (bset/bne at 0xe866, 0xe8fc, 0xe98e); cleared at 0xeb2e and 0xef8c
+102ec1	1	rematch_flag	rematch flag: bit 7 set at 0xee5c before golfer select for a new game_mode-2 match; char select 0x7dc68 then skips the snapshot golfer preselect; cleared at 0xe8d4
+106fd4	1	loft_slot_putter_flag	bit 7 set by club_hud_draw 0x55d54 when the putter stream is drawn into the loft slot $711b; a non-putter draw clears it and redraws the loft stream ($56438); cleared by $56284
+106fd8	2	ball_lie_copy	surface type at the stopped ball: terrain_type_query at 0x5ae52 (copied at 0x5ae5e), forced to 4 near the tee (0x5ae80); set from 0x106fd6 by shot_result_task 0x6bef8; -1 at ball setup (0x5acb0); 5/7/8 select the shot-origin restart (0x5b3ba, 0x588f6, round_gate_a 0x6c350), 6 tested by round_gate_b 0x6c372
+106fda	2	prev_ball_lie	previous lie: written at 0x5854a and 0x587a2 from $106fd6
+106fdc	2	shot_lie_copy	copy of the lie taken at the shot start ($58274)
+106fe0	2	wind_strength	wind strength 0..$f: seeded by $56e80/$56eda, clamped by $56f7a, nudged by $55640, consumed by the launch $4cbe (wy = -cos(dir<<8)*str)
+106fe2	2	wind_direction_106fe2	wind direction 0..$f (16 steps = 360 deg): same writers as $106fe0 (wx = sin(dir<<8)*str at $4cbe)
+106fe4	2	shot_curve	shot curve 0..8 (4 = STRAIGHT; 0-3 HOOK, 5-8 SLICE labels at 0x56536): set to 4 by 0x56284 each shot, stepped by B/C in 0x562d2 within the golfer limits (0x80c3e); read by the launch 0x4cbe as (value - 4); not a loft
+106fe5	1	shot_curve_lo	low byte of the shot curve $106fe4, compared with the golfer curve limits by 0x562d2
+106fe8	2	shot_accuracy	accuracy marker position 0..0x22 at the A press (0x72638); perfect zone centred on 0x11; putts store 0x11 (0x72286)
+106fea	2	aim_offset_delta	this frame's change of $107080 (low byte sign-extended), written by 0x56582; read by 0x638d4, 0x67fac, 0x6df76, 0x6e22c, 0x6e4c6, 0x6e97a; cleared by 0x58274; not accumulated, and $bdc6 does not read it
+106fed	1	club_changed_flag	set by the club stepper ($55b78/$562d2), cleared by the club reset ($55b5e)
+106fee	10	digit_buffer	8-word digit scratch: number_draw_8 0x56752 writes 8 words, number_draw_4 0x56762 / 0x567c2 write 4 (move.w d4,(a2)+ loop at 0x5676e)
+10707e	2	aim_target_angle	base of the aim value (aim_vector_set $bdc6: $10707e - $107080); stored by $58274; "camera scale" is unproven; seeded at 0x58382/0x58388 with atan2_12bit of the view axes (an absolute 12-bit aim angle)
+107080	2	aim_angle	aim offset: aim_offset_actor $56582 steps it by +-1 (wraps at $fff); $58274 writes it; aim_vector_set $bdc6 uses $10707e - it as the aim value; "camera scale" is unproven; seeded at 0x58382/0x58388 with atan2_12bit of the view axes: an absolute 12-bit aim angle
+107085	1	shot_end_code	0 pending; 1 non-match current-player hole completion (store 0x6c0da); 2 decided match-play hole (store 0x6c276); $ff shot completion without result-scene driver (store 0x6c11e, also relocation-timeout fallback). All nonzero values enter 0x5857a; signed-negative skips 0x6d4b0 at 0x585b6; cleared each shot by 0x58274. Consumer/branch evidence in docs/lanes/semantic-runtime-resolutions.md
+10d4ae	10	type6_point_list	x/y word pairs of the hole's type-6 objects (0..2), built by $5926c from hole_record_ptr+6 and ended by one $ffff word, read only by ground_height_query ($5929a); at most 10 bytes over all 72 holes, so it stops short of course_index $10d4b8; not pins (semantic-review-p1-54c3c)
+10d4ba	2	course_number_saved	save slot for the course number used by the select flow
+10d4be	2	hole_number_saved	save slot for the hole number
+10ebbe	1	phase_byte	the screen/phase ID: 0 boot, 5 title/round, $15 round live (set by $58274), $2b/$29/$32 input block ids also key off it
+10ebc6	2	course_strip_base	first sprite index of the $20-sprite background block, stored at 0x586b8 from sprite_map_col_a; not a VRAM strip
+10eda0	2	panel_sprite_base	first sprite index stored at 0x584d8 from sprite_map_col_b (d0 = $3c); read as the first sprite index by overlay_objects_build 0x809c0/0x80aa0; no name-entry use
+10ef48	1	title_service_byte	memory-card record byte +$14, loaded at 0x85f5e (0 without a card, 0x85f96); read and cleared by the post-START state at 0xe89c/0xe8a2: nonzero with game_mode 0 sets both continue counts to $80 and goes straight to scorecard_enter (probably a resumed card game, unproven); not a service byte
+10fd88	1	soft_dip_holes_first	BIOS_GAME_DIP+4, soft DIP count 1 'HOLE(1st)' (default 3; US table 0xdcc8): copied by the PLAYER_START handler 0xe238 into the starting player's hole stock $10d572/$10d5d2 (player_status +$44); not a coin counter
+10fd8a	1	soft_dip_holes_cont	BIOS_GAME_DIP+6, soft DIP list 1 'HOLE(cont)' (choices 1..15, default index 2): 0xe238 stores value + 1 into the hole stock $10d572/$10d5d2 of a continuing player; not a coin counter

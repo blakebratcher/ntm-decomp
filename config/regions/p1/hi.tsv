@@ -1,0 +1,7 @@
+# p1-hi lane regions: fixed P-ROM [0x88000, 0x100000) bytes that are not code.
+# Format: <hex start>	<hex size>	<kind>	<name>	<evidence>
+# The frame/palette/RGB555 banks above this table are classified in
+# config/data_regions.tsv; the private lane report documents their validated
+# internals (tools/lane_p1hi_tables.py) and the two inventory corrections.
+0ca030	480	data	palette_fade_lut	32-long pointer table to 32-byte blend-ramp records at 0xca0b0+0x20k, record[k][p]=(p*k)//31; fade engine loads the table with lea ($ca030,PC) at 0xca614 (two channel-symmetric copies follow) and indexes by |delta|*4 / fade step; formula-validated by tools/lane_p1hi_tables.py
+0ca99c	35664	fill:00	fixed_tail_fill	all-zero pad to the 1 MiB fixed window; reference scan (tools/lane_p1hi_refscan.py --lo ca99c --hi 100000 --word-base 88000) finds 0 operand/PC-relative/word-offset and 0 source hits in either P-ROM half; docs/lanes/p1-hi.md triages the numeric coincidences

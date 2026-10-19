@@ -1,0 +1,11 @@
+00056744	hex4_draw_7063_dead	dead (after demo5_y_adjust's rts at 0x56742; the old MAME 'fetch' was prefetch): movea.w #$7063,a1 / d1=$300 / jsr number_draw_4: 4 hex digits of d0 at fix x 3, y 3
+00056892	u32_to_bcd8_dead	dead (after bcd_convert's rts at 0x56890; the old 'fetch' was prefetch): d0 >= 99,999,999 -> $99999999, else packed BCD digits by repeated math_div_u32 by 10
+000569fa	random_range_exit_569fa	dead code: a second rts after random_range's own rts at 0x569f8; unreachable (the old "fetch" was a prefetch)
+0006a86c	mode_select_panel_init	executed (MAME tap, MENU_ADVANCE): entry fetch at $6a86c, body $6a870-$6a8e0; lea ($6a838/$6a810,pc) record walks with palette sets ($b9a22), spawns the $6a9ee handler (lea + jsr $4c6), installs state $6a8e2
+0006a95c	dead_move_to_xy_6a95c	flow: fall-through into $6a95c after the bsr.w $6a9a6 of covered 0006a8e2.s (the state installed by mode_select_panel_init) returns; bsr $6aaa2 / bra $6aa6e into covered code
+0006a9ee	mode_select_panel_item_init	executed (MAME tap, MENU_ADVANCE): spawned as actor handler via lea ($6a9ee,pc); jsr $4c6 from mode_select_panel_init; sets palettes from ($4a/$4c,a6), jsr $f3d2, installs state $6aa22
+0006aad6	mode_select_panel_layer2_init	spawned by mode_select_panel_init (lea + jsr $4c6 at $6a86c); the old "entry $6aad6 from covered $6aad0 fall-through" was the 68000 prefetch after an rts; body $6aada-$6ab08 executed in MENU_ADVANCE; spawns the $6ab5a handler, sets palettes $12a/$12d/$12b, installs state $6ab24 (semantic-review-p1-69f74)
+0006ab5a	mode_select_panel_layer3_init	flow: spawned as actor handler via lea ($6ab5a,pc); jsr $4c6 from mode_select_panel_layer2_init; palette set $144, installs state $6ab78
+0000f390	compulsion_timer_hex_draw	draws the BCD byte $10fdda as two fix cells $727b/$729b (one column apart), tile $1300 | ('0' + nibble) via vram_tile_block_fill $d7a6; decimal digits only for BCD values; called at 0xe676 (title)
+0000f4c0	dead_skip_to_hole18	dead code (reach.py; the 'fetch at $f4c0' was prefetch after the rts at 0xf4be): with game_mode 2 and P1 holding D (bit 7 of $10d514), hole_number = 18 and bytes 0-16 (17 bytes, dbf #$10) of both result arrays $107014/$10703a = 0
+0005b678	actor_release_trampoline_5b678	target of bcs.w 0x5b632 and bne.w 0x5b63a in ball_terrain_effect_actor (static); jmp $54a.l (actor_wait_children_then_release)

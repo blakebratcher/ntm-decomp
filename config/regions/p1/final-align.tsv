@@ -1,0 +1,2 @@
+# Padding whose role follows from a proven bytecode terminator and the next word-aligned instruction.
+0081c3	000001	fill:00	actor_script_81a6_alignment	0x81a6 script (installed by lea at 0x819e + script_install at 0x8122) walks 4-byte palette + four 6-byte frame records to single-byte stop opcode 9 at 0x81c2. Handler 0x687ae returns carry without reading another byte; zero at 0x81c3 aligns the proven instruction entry 0x81c4. No absolute/u24 pointer or instruction operand to the pad; final reconstruction proof.

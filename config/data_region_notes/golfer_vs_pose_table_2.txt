@@ -1,0 +1,5 @@
+; Entries 0-2 of the second 6-long frame-pointer table at $6f7da indexed by
+; golfer id (golfer_vs_pose_lookup 0x6f632: lea at 0x6f652, long $6f7da +
+; id*4 -> actor +$4a). This 12-byte source holds golfer ids 0..2 only; ids
+; 3..5 are the first 12 bytes of region row p1mid_data_6f7e6 ($6f7e6). All six
+; longs are frame starts of the $88000 frame bank.

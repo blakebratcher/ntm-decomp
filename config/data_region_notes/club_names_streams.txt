@@ -1,0 +1,7 @@
+; [$55ef0,$55f4c) 23 longs indexed by club type 0..$16 (golfer_bags entry +2):
+;   club_hud_draw 0x55c74 (lea at 0x55c9a) picks long $55ef0 + type*4 and
+;   draws it with fix_stream_draw 0xd6f8 at fix (17,27). Types 0-4 and 5-9
+;   share the same five streams.
+; [$55f4c,$56022) 17 fix streams: 16 x 12 bytes {op 3, high byte $46, 3
+;   columns, 2 rows, 6 tile bytes, op 2 end, pad 0} and one 22-byte stream
+;   ($5600c, types $15/$16) with an 8 x 2 block.

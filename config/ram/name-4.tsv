@@ -1,0 +1,18 @@
+# Lane name-4 work-RAM names (round/course gameplay globals), from the code in
+# [0x63f00, 0x6cef0).  Format:
+# <hex addr>	<hex size>	<name>	<evidence: the consumer instruction that reads/writes it>
+# Merged by tools/symbols.py.  Addressed globals whose role is not yet
+# decodable are listed in docs/subsystems/name-4.md, not given a hollow name.
+102cd2	4	deflect_cross_scaled	Long 16.16 collision cross product from ball_collision_deflect_hard: (vx>>4)(y-ay)-(vy>>4)(x-ax), scaled by obstacle type and stored at $84a8. Bounce actor $69f74 reads the long sign but thresholds only its low word (neg.w for negative); lane velocity/contact-radius bound gives |value| <= 0.735 < 1.0, selector 0..3 (semantic-settle-effects-palettes).
+10d52b	2	input_word_b	press edges this frame (input_state +3 via 0x601b0; P1|P2 merged by 0x60200 or the active player's by 0xf1dc): bit 2 left, 3 right, 4 A, 5 B, 6 C; tested by 0x6a622/0x6a708/0x6b08c/0x6b236 and 0x60268 (andi #$70)
+10d984	2	cell_limit_hi	compared against 0x10d97c by 0x68204; also the mirror trigger input of 0x681b2
+10d986	2	cell_flag_86	nonzero bit feeding the 0x68204 state byte
+10d988	2	cell_flag_88	nonzero bit feeding the 0x68204 state byte
+10d974	2	cell_x_hi_projected	extent 0 high bound (cup_extent_a +2; sentinel -0x8000 = empty); 0x61e34 / 0x65aaa (semantic-review-p1-61620)
+10d976	2	cell_bandA_pair	extent 0 lowflags (cup_extent_a +4); tested against 0x10d97e by 0x659da (Z = no band-A overlap) (semantic-review-p1-61620)
+10d978	2	cell_bandB_pair	extent 0 highflags (cup_extent_a +6); tested against 0x10d980 by 0x659f0 (semantic-review-p1-61620)
+10d97a	2	cell_x_lo_committed	extent 1 low bound (written by 0x62b06 via 0x62ad6); 0x61e34 saves/restores it around its recompute, the only source of the "committed" reading (semantic-review-p1-61620)
+10d97c	2	cell_x_hi_committed	extent 1 high bound; saved/restored by 0x61e34 (semantic-review-p1-61620)
+10d97e	2	cell_bandA_mask	extent 1 lowflags; ANDed with 0x10d976 by 0x659da (semantic-review-p1-61620)
+10d980	2	cell_bandB_mask	extent 1 highflags; ANDed with 0x10d978 by 0x659f0 (semantic-review-p1-61620)
+10ebac	2	cell_band_y	row y computed by the cell band draws 0x65a06/0x65b8c and compared by 0x65aaa

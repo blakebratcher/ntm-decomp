@@ -1,0 +1,8 @@
+# Variable voice-list tails proved from the 0x507b/0x50a7 walker.
+# The former 18-byte model omitted voice 2's parameter and the null triplet.
+008d4a	000004	data	m1_voice_tail_8d38	Record 0x8d38 from music table: 0x50b4 reads voice 2 param at +18; 0x50a7/0x50aa/0x50ad read the null off/bank triplet at +19..21 after IX advances by 5 at 0x50d1/0x50d4. tools/lane_m1_decode.py parse_music_voice_list; final reconstruction proof.
+008d4e	000001	fill:00	m1_voice_null_pad_8d4e	Single zero pad after the proven null triplet of 0x8d38 and before next record 0x8d4f; walker exits before this byte, no raw u16 pointer to 0x8d4e, no decoded code reference; validated by final-m1-voiceproof.json.
+008d61	000004	data	m1_voice_tail_8d4f	Record 0x8d4f from music table: 0x50b4 reads voice 2 param at +18; 0x50a7/0x50aa/0x50ad read the null off/bank triplet at +19..21 after IX advances by 5 at 0x50d1/0x50d4. tools/lane_m1_decode.py parse_music_voice_list; final reconstruction proof.
+008d65	000001	fill:00	m1_voice_null_pad_8d65	Single zero pad after the proven null triplet of 0x8d4f and before next record 0x8d66; walker exits before this byte, no raw u16 pointer to 0x8d65, no decoded code reference; validated by final-m1-voiceproof.json.
+00a6b1	000004	data	m1_voice_tail_a69f	Record 0xa69f from music table: 0x50b4 reads voice 2 param at +18; 0x50a7/0x50aa/0x50ad read the null off/bank triplet at +19..21 after IX advances by 5 at 0x50d1/0x50d4. tools/lane_m1_decode.py parse_music_voice_list; final reconstruction proof.
+00a6b5	000001	fill:00	m1_voice_null_pad_a6b5	Single zero pad after the proven null triplet of 0xa69f and before next record 0xa6b6; walker exits before this byte, no raw u16 pointer to 0xa6b5, no decoded code reference; validated by final-m1-voiceproof.json.

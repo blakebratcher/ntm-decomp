@@ -1,0 +1,17 @@
+build/
+src/
+tools/vasm
+tools/vasm-src
+tools/vbcc
+tools/vbcc-src
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.claude/
+.codex/
+.worktrees/
+*.p1
+*.m1
+*.zip
+*.neo

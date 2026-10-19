@@ -1,0 +1,15 @@
+# Named data regions of the P-ROM, sourced from the decoded evidence in the
+# companion RE workspace (the companion RE workspace (outside this repository)).
+# Format: <hex start>	<hex size>	<name>	<evidence note>
+# tools/gen_data_sections.py emits src/p1/data/<name>.s from this table.
+# Sizes are exact per the findings; the byte gate verifies content, and
+# tests/test_tools.py validates the regions sit inside the P-ROM windows.
+00088000	00025730	frame_bank	4444 frames exhaustively parsed: two-byte part-count/flags header, per-part signed x/y words and width/height bytes then width*height tile words; consumer sprite_node_render $878/$9e0; flags allzero, heights1..18, widths1..33, alltilewords fit65536 C-ROM tiles; tools/semantic_assets.py
+000ad730	0000bfc0	palette_bank	767 palettes x16 {u8 R,G,B,pad}, allchannels0..31/allpadzero validated; consumers palette_driver $b9de6 and converter $ca030; RGB555 lookup $ba030 and hardware uploader $ca892; tools/semantic_assets.py
+000ba030	00010000	rgb555_table	32,768-entry RGB555 -> Neo Geo colour-word table at 0xba030
+0008318e	00000168	golfer_bags	6 golfer pointers to 14 club entries {u16 distance_x4, u16 club_type}, 0x8318e-0x832f6
+0006f7c2	0000000c	golfer_vs_pose_table	6-entry table indexed by golfer id (used by golfer_vs_pose_lookup)
+0006f7da	0000000c	golfer_vs_pose_table_2	second 6-entry table (used by golfer_vs_pose_lookup)
+00055ef0	00000132	club_names_streams	club-name fix-layer stream selection tables + stream bodies (drawn via 0xd6f8 from bag_get_club 0x55c74), 0x55ef0-0x56022
+0006f792	00000030	golfer_name_frames	4 x 12-byte golfer name records (P1/P2 table bases 0x6f792/0x6f79e), indexed by golfer id
+000832f6	00000716	club_icon_data	27-entry club icon frame pointer list + inline per-club icon data (drawn by club_icon_draw 0x561a0); sized to the next inventory entry

@@ -1,0 +1,19 @@
+# straddle lane symbol table (P1 fixed).
+# <hex addr>	<name>	<evidence>
+# Merged with config/names.tsv and the other lane tables by tools/symbols.py.
+# Rows here are of three kinds:
+#  1. the out-of-name-1-range straddle primary (boot_init_watchdog at
+#     $d694); the four in-range straddle primaries live in name-1.tsv,
+#     and the mid-instruction handler entries keep their rows in
+#     name-1.tsv / name-2.tsv as equ entries (finish-lane convention);
+#  2. the 15 evidence-apply name-1 registrations, gate-forced into
+#     tools/lane_name1_annotations.py + config/names/name-1.tsv by the
+#     evidence-apply lane; copied here so this lane owns them (proposed
+#     shared edit: drop the duplicates from name-1.tsv at merge);
+#  3. suggested names for still-unclassified bytes (no source yet; the
+#     rows register the names for the future classification).
+0000d694	boot_init_watchdog	cold-boot fall-through from game_init_core $d67c: watchdog, VRAM reset, actor pool and real-input sampler setup; ends with rts at $d6c2. The $d696 value at $1998 is quarter-sine sample 648, not a boot-task pointer or instruction entry
+000569fc	queue_push_56a1c	suggested name (evidence-apply): queue-push helper + {ptr,0xf8..0xfb} records; no consumer found yet (uncovered range 0x569fc-0x56a40)
+00080cfe	swing_engine_read_slot0	mid.tsv: runtime celltable consumer (MAME tap, demo/play swings); reads the row slot 0 long through the A6+$16 row cursor (golfer_swing_row_tables); inner label of swing_engine (name-8 source)
+00080d12	swing_engine_read_slot1	mid.tsv: runtime celltable consumer (MAME tap, demo/play swings); reads the row slot 1 long through the A6+$16 row cursor (golfer_swing_row_tables); inner label of swing_engine (name-8 source)
+00080d52	swing_engine_read_club_slot	mid.tsv: runtime celltable consumer (MAME tap, demo/play swings); reads the club-layer row slot (A0 advanced past the class thresholds) through the A6+$16 row cursor (golfer_swing_row_tables); inner label of swing_engine (name-8 source)

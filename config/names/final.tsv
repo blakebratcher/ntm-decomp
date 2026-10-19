@@ -1,0 +1,22 @@
+# Final reconstruction pass symbol table (the private lane report).
+# <hex addr>	<name>	<evidence>
+# Entries of rootless code (kind: unref-insn, proof by tools/unref_code.py)
+# and the inner entries of those sources.
+00000540	actor_link_static_child	dead code: bsr into actor_spawn_child at $4dc, then bset #0,($12,a0) marks the linked node static
+00000f34	actor_draw_camera_rel	dead code: third actor_draw variant, ORs (+$12 & 4) into the flip byte so sprite_node_render subtracts the camera origin
+00000f66	camera_origin_set	dead code: the only writer of camera_x/camera_y ($102666/$102668): $a0/$178
+00004678	golfer_pose_stub_a0	dead code: palette bank $a0, pose script $4704, bra golfer_pose_actor_init
+00004684	golfer_pose_stub_a1	dead code: palette bank $a1, pose script $4714, bra golfer_pose_actor_init
+00004690	golfer_pose_stub_a2	dead code: palette bank $a2, pose script $4724, bra golfer_pose_actor_init
+00004b26	dead_effect_anim_setup_c	dead code: palette bank $a0, lists p1_4c30_ptr_list_c / p1_4c82_byte_list_c, falls into the shared $4b48 body
+00056dd0	fix_border_wipe_step	dead code: fix-layer border wipe step keyed on $106ffe, tile $420
+00056dd8	fix_border_wipe_step_b	dead code: the same wipe with tile $400
+00067dfa	golfer_scene_offset_helper	dead code: d2 = p1_67e2e_offset_words[d1], biased jsr $63504, ($30,a6) = swap(d0)+d2+$90
+00068cd4	ball_lie_567_test	dead code: carry clear when the lie word $106fd6 is 5, 6 or 7
+0006ab9a	placeholder_portrait_release	dead code: palette pair release/alloc from +$14 of p1_6abe6_placeholder_records
+0006abc2	placeholder_portrait_frame_a	dead code: frame long +8 of a placeholder record into ($2c,a6)
+0006abd4	placeholder_portrait_frame_b	dead code: frame long +$c of a placeholder record into ($2c,a6)
+0006cea4	dead_zoom_y_step	dead code: ($3b,a6) -= $10, on borrow state ($11,a6) = 6
+0006ceb8	panel_fade_up_step	dead code: ($3b,a6) += $10, on carry state ($11,a6) = 7
+0006ff32	hex_draw4	dead code: four hex digits of d7, right to left, digit_draw_decimal5 register convention
+000004dc	actor_spawn_child_link	inner entry of actor_spawn_child after the free-list pop: move.l a1,(a0) links node A0 (resume PC A1) under A6; bsr.s target of the unref actor_link_static_child ($540)

@@ -1,0 +1,1 @@
+; 32,768-entry RGB555 -> Neo Geo colour-word table at 0xba030

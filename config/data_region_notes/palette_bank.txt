@@ -1,0 +1,3 @@
+; 767 palettes x 16 x 4 bytes (R,G,B,0), channels0..31, $ad730-$b96f0;
+; validated by tools/semantic_assets.py. Palette driver $b9de6/$ca030
+; converts records through RGB555 lookup $ba030; hardware upload $ca892.

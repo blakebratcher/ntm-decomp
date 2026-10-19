@@ -1,0 +1,11 @@
+; Two structures, neither 4 x 12-byte name records:
+; [$6f792,$6f7aa) two 12-byte actor records {u32 frame, u16 x, u16 y, u16 sort
+;   key, u16 palette}: $6f792 = frame $9e3ea at ($a0,$1c8) key $100 palette $1a1,
+;   $6f79e = frame $9e43a, same position, key $101 palette $1a2; loaded by the
+;   two vs_centre_frame_a entries (lea at 0x6f772 / 0x6f77c) and handed to
+;   actor_init_from_record_entry 0x73760. Fixed frames, not indexed by golfer.
+; [$6f7aa,$6f7c2) six long frame pointers indexed by golfer id 0..5: the P1/P2
+;   VS name labels read long $6f7aa + id*4 (0x6f6c8 by golfer_id_p1, 0x6f6e6 by
+;   golfer_id_p2) into actor +$2c.
+; All eight longs are frame starts of the $88000 frame bank (semantic_assets
+; parser).

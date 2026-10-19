@@ -1,0 +1,48 @@
+{
+  "set": "turfmast",
+  "title": "Neo Turf Masters / Big Tournament Golf",
+  "year": 1996,
+  "developer": "Nazca",
+  "publisher": "SNK",
+  "files": {
+    "200-p1.p1": {"size": 2097152, "role": "68000 program: 1 MiB fixed + 1 MiB banked"},
+    "200-m1.m1": {"size": 131072,  "role": "Z80 sound driver"},
+    "200-s1.s1": {"size": 131072,  "role": "fix-layer tiles"},
+    "200-c1.c1": {"size": 4194304, "role": "sprite tiles, planes 0/1"},
+    "200-c2.c2": {"size": 4194304, "role": "sprite tiles, planes 2/3"},
+    "200-v1.v1": {"size": 2097152, "role": "ADPCM-A samples"},
+    "200-v2.v2": {"size": 2097152, "role": "ADPCM-A samples"},
+    "200-v3.v3": {"size": 2097152, "role": "ADPCM-B samples"},
+    "200-v4.v4": {"size": 2097152, "role": "ADPCM-B samples"}
+  },
+  "p_rom": {
+    "word_swapped": true,
+    "fixed":  {"file_range": [1048576, 2097152], "cpu_addr": 0,       "size": 1048576},
+    "banked": {"file_range": [0, 1048576],       "cpu_addr": 2097152, "size": 1048576},
+    "note": "File layout per MAME ROM_LOAD16_WORD_SWAP('200-p1.p1', 0x100000, ...) + ROM_CONTINUE(0x000000, ...): the file's second half is the fixed program at CPU 0x000000, the first half is the banked program. On disk each 16-bit word is byte-swapped relative to 68000 order."
+  },
+  "cpu_map": [
+    {"start": 0,         "end": 127,       "name": "vectors (banked_vectors_r)"},
+    {"start": 128,       "end": 1048575,   "name": "fixed P-ROM"},
+    {"start": 1048576,   "end": 2097151,   "name": "work RAM (64 KiB mirrored x16)"},
+    {"start": 2097152,   "end": 3145727,   "name": "banked P-ROM window"},
+    {"start": 3145712,   "end": 3145727,   "name": "bank select / protection latches"},
+    {"start": 3145728,   "end": 3276799,   "name": "I/O (0x300001 watchdog, 0x300080 TEST)"},
+    {"start": 3276800,   "end": 3407871,   "name": "audio command (0x320000)"},
+    {"start": 3538944,   "end": 3604479,   "name": "unmapped (0x360000-0x37ffff)"},
+    {"start": 3670016,   "end": 3670271,   "name": "system registers (0x380000-0x3800ff)"},
+    {"start": 3801088,   "end": 3801119,   "name": "system control latches (0x3a0000-0x3a001f)"},
+    {"start": 3932160,   "end": 3932175,   "name": "LSPC video registers (0x3c0000-0x3c000f)"},
+    {"start": 4063232,   "end": 4194303,   "name": "unmapped (0x3e0000-0x3fffff)"},
+    {"start": 4194304,   "end": 4202495,   "name": "palette RAM (0x400000-0x401fff)"},
+    {"start": 8388608,   "end": 8392703,   "name": "memory card (0x800000-0x800fff)"},
+    {"start": 12582912,  "end": 12713983,  "name": "BIOS (0xc00000-0xc1ffff)"},
+    {"start": 13631488,  "end": 13697023,  "name": "backup RAM / saveram (0xd00000-0xd0ffff)"},
+    {"start": 14680064,  "end": 16777215,  "name": "unmapped (0xe00000-0xffffff)"}
+  ],
+  "banking": {
+    "window": [2097152, 3145727],
+    "latches": [3145712, 3145727],
+    "mechanism": "write_banksel(data): bank = data & 0x07; banked bytes come from region offset (bank+1)*0x100000. This cart's 2 MiB P-ROM has exactly one 1 MiB bank (region offset 0x100000), so the 0x200000-0x2fffff window always shows it; other bank values are rejected by the driver. Source: MAME 0.289 src/mame/snk/neogeo.cpp (install_read_bank 0x200000-0x2fffff, write_banksel latch install, write_banksel body)."
+  }
+}

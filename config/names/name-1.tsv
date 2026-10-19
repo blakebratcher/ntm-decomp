@@ -1,0 +1,198 @@
+# name-1 lane symbol table (P1 fixed [0x0, 0xd54a)).
+# <hex addr>	<name>	<evidence>
+# Merged with config/names.tsv by tools/symbols.py; an address named
+# in config/names.tsv is never repeated here.
+00000122	cart_vector_user	68k cart USER vector: jmp user_entry ($e36e); BIOS hand-off to game code
+00000128	cart_vector_player_start	cart vector $128: jmp $e400 -> jsr $e238 credit/start-consume processor (FINDINGS s6c)
+0000012e	cart_vector_noop	cart vector $12e: jmp $e406 -> jsr $e36c where $e36c is a bare rts - empty callback
+00000134	cart_vector_coin_sound	cart vector $134: jmp $8044a sets pending-sound flag $1000d2; vblank $d49e -> $803f6 sends audio cmd $0f to $320000
+00000428	boot_init_actor_pool	boot init: links the $51 x 0x60-byte actor slots $100280..$1020e0 into the free list $102080; seeds the 5 boot task nodes from the $400 table
+000004c6	actor_spawn_child	allocates a 0x60-byte actor node from the free list $102080, links it after A6, level = A6.level+1; A1 = node entry; 681 call sites
+0000054a	actor_wait_children_then_release	while (A6+8).level > A6.level (children still linked) re-arms the resume PC $54a; otherwise falls through into actor_release ($562) - wait for the children, then die
+00000562	actor_release	unlinks A6, frees the node (free list $102080 or the (A6+$12) bit-0 variant), restores parent into A6
+00000598	actor_release_children	walks (A6+8) while next.level > A6.level and releases each deeper node via $562; 148 callers (screen setup teardown)
+000005b4	actor_main_loop	actor main loop (game code): a6 = $100100, $102084 = a6, jsr (a6), a6 = (8,a6), forever; entered by jmp from 0xe3fa
+000005ca	actor_attr10_cmp_5ca	MAME tap (all scenarios): fetch at $5ca with PPC $5c4 (fall-through from the covered actor loop) and PPC $e43a (rte resume of interrupted execution)
+00000678	vram_reset_all	fills VRAM $8000.. for $17d words with 0, then $0..$2f9f with 1, pokes the watchdog each $16 words, clears the queue headers
+000006f2	sprite_lists_reset	clears the two sprite node list heads ($1020a2, $102654) and re-arms the sort pool $10209e/$102088
+0000277e	math_neg_cos	quarter-sine table $f78 (16.16): returns -cos(d0), d0 = angle in 12-bit turns (0x1000 = 360 deg); sign folded by quadrant
+000027c0	math_sin	sin(d0) = math_neg_cos(d0 + 0x400) (90-degree phase shift)
+000027f2	math_mul_32x32_64	unsigned 32x32->64 product by partial products into an 8-byte big-endian stack accumulator; out d0 = low 32, d1 = high 32
+00002820	math_mul_int	signed 32x32, returns the low 32 bits in d0 (16.16 x integer -> 16.16); finds both signs, negates after
+00002836	math_mul_64_signed	signed 64-bit product wrapper: d0/d1 absolute, d7 = sign, negate the 64-bit pair after (neg.l/negx.l)
+00002844	math_mul_fixed	16.16 x 16.16 -> 16.16: both < 1.0 uses the truncated magnitude product, else bits 16-47 of the 64-bit product (rounds toward -inf)
+000028a8	math_mul_fixed_tail	shared magnitude-product tail of math_mul_fixed: mulu.w d1,d0, clear low word, swap; sign applied at $28b6
+000028bc	math_div_u32	32/32 unsigned restoring divide (32 shift-subtract steps, quotient in d0); dividend 0 -> 0, divisor 0 -> the $28e0 signed-path loop
+00002c48	math_atan2	atan2(d0-d2, d1-d3) -> 12-bit angle via table $1f7c (0x401 words, entry 0x400 = 0x200); quadrant fixup to 0x1000
+00002d8a	hole_object_actors_spawn	walks the hole-object list ((hole_record_ptr)+6, 6-byte records {type, flags, x, y}, negative type ends): for each record with flags bit 2 clear, an empty $102b84 slot and hole_object_in_view C=1, spawns actor_spawn_child with A1 = the long at $2df8 + type*4; actor +$40 = record, +$44 = slot, slot = record; spawns nothing while $107082 is negative; called by shot_launch $4cbe and re-run every frame by the $2f0a task
+00002e34	hole_object_in_view	C=1 when hole object A1 (half-size from the $2cba table by type; type 3 at pin_x_word/y; flags bit 3 = y+$c) overlaps the window around the ball (player record +$4 x / +$8 y clamped to [$ac, hole+$12*16-$d3] / [$a0, hole+$14*16-$a0]; x -$8c..+$b4, y -$80..+$70)
+00002f0a	hole_object_view_task	spawn: $5850e lea ($2f0a).l,a1 -> jsr $4c6 at $58514 (functions-00058442 shot_swing_entry)
+00002f26	hole_object_screen_pos	flow from recovered $3198 (bsr $2f26); reads pin_x_word/y and ball_screen_x/y
+00002f7e	dead_hole_object_screen_pos_call	dead 2 bytes after the rts at 0x2f7c (bsr.s $2f26 shape; live callers 0x303e/0x30d6 bsr $2f26 then bra $2f80); the MAME fetch at $2f7e was prefetch and the long $2f7e at $66f8c is a value in the rising ramp $66f10-$6734b, not a pointer
+00002f80	hole_object_view_arm	flow from recovered $303e (bra $2f80)
+00002f86	hole_object_view_state	flow from recovered $320c (bra $2f86)
+00002f98	hole_object_view_draw	in-view tail of $2f86 (fall-through from bcc at 0x2f94): jmp actor_draw_alt; not a $2df8 entry
+00002f9e	hole_object_despawn	flow from recovered $2f94 (bcc $2f9e)
+00003000	hole_object_type7_state	type 7 first state: long $00003000 at $2e14 in the $2df8 type table (consumer movea.l at $2dd6); NOT the move.l #$3000,d1 at $971e (a constant)
+00003064	hole_object_type7_child_tail	tail of the $305a state of the type 7 child (fall-through from 0x305e): parent y copy, priority = parent's - 1, jmp actor_draw_alt
+000030da	hole_object_type4_state	type 4 first state: long $000030da at $2e08 in the $2df8 type table (consumer movea.l at $2dd6)
+000030e8	hole_object_type5_state	type 5 first state: long $000030e8 at $2e0c in the $2df8 type table (consumer movea.l at $2dd6); $30f6 = the type 10 state (long at $2e20)
+00003100	hole_object_overlay_setup	flow from recovered $30e4 (bra $3100)
+0000323e	hole_object_type3_child_draw	fall-through tail of the $322e state (type 3 child): jmp actor_draw_alt; not a $2df8 entry
+000032ca	ball_object_dy	d0 = (current_player_record +$8, ball y) - (($40,a6) hole-object record +$4, object y); used by the type 9 state $3244
+00003f86	ball_frame_anim_select	picks the ball's frame table: direction class ($bad4, 0..7) selects the 8-byte record at $40be (byte 1 -> (a6+$3e), long -> $40fe sub-table); height band = count of $405c thresholds below int(64*ball_z) (player record +$c), 0 when rolling/stopped; the ball_roll word walks the $407e speed records {threshold, hold limits, frame step}; sets (a6+$2c) frame (semantic-review-p1-009e0)
+00003ffc	ball_frame_step	bge.w $3ffc from ball_frame_anim_select: reads the per-band frame offset and stores it into (a6+$2c)
+0000460a	ground_height_at_ball	ground height (16.16) under the ball: ball x/y ($102c68/$102c6c) scaled <<2 then swapped, terrain sample $5929a, result >>6
+0000462c	lie_b_swing_effect_start	spawn: $5acf0 lea ($462c).l,a1 -> jsr $4c6 at $5acf6 (blocks-0005ac62 ball_actor_setup)
+0000469c	golfer_pose_actor_init	allocates a palette slot ($b9a22), sets zoom $90/$138 and priority -$8000, then installs the first frame from the script (A0) indexed by the pose byte at (A6+$c)+$42 and arms state $46da
+000046da	pose_frame_step	frame stepper: (a6+$1a) hold counter, next frame long from the script into (a6+$2c), negative frame = end
+000046fe	pose_frame_step_end	bmi from covered $46ea (bmi.w $000046fe) (blocks-000046da)
+000048c0	surface_b_effect_actor	spawn: $943c lea ($48c0,PC),a1 -> jsr $4c6 at $9440 (blocks-000093fa, ball_slow_roll_settle region)
+00004978	actor_camera_pan_draw	camera_shift_actor $59218 (adds the camera pan $10d4a2/$10d4a4 to the actor x/y) then jmp actor_draw_alt; no display wait; state installed by move.l #$4978,(a6) at $4940 and reached by fall-through from $4970 (semantic-review-p1-009e0)
+00004984	surface_b_effect_release	flow from recovered $492a (bcs $4984)
+0000498a	anim_script_step	shared script stepper for the $49f0/$4b5e animators: (a6+$1a) hold, next frame long -> (a6+$2c), negative = end (C=1)
+000049b2	anim_script_end_carry	bmi from covered $499a (bmi.w $000049b2) (blocks-0000498a)
+00004a98	landing_effect_entry	spawn: $94f8 lea ($4a98,PC),a1 -> jsr $4c6 at $94fc (functions-000094b0 ball_slow_roll_settle)
+00004aae	landing_effect_anim_setup	landing-effect sprite set-up after $4a98 (bmi.w at $4a9e or fall-through after the ball_trail_init spawn at $4aa8): palette $ab ($b9a22), once positions at the parent, priority = parent +$3c - 2, y += ball_z_screen_offset; then anim_state_arm with the $4b90 frame list (20 frames) and the $4c5c hold bytes (semantic-review-p1-009e0)
+00004ae8	surface_6_7_effect_actor	spawn: $9504 lea ($4ae8,PC),a1 -> jsr $4c6 at $9508 (blocks-00009504 ball_surface_6_7_case)
+00004b10	shot_anim_player_b	second frame-script player: pointer list $4be4, byte list $4c70, sets state $4b5e; reached only by fall-through from surface_6_7_effect_actor ($4b0c), a label in blocks/00004ae8.s (the old function entry rested on the sine-table value $4b10 at $1280)
+00004b48	anim_state_arm	A0/A1 = script pointers -> (a6+$16)/(a6+$1c), hold = 1, arms state $4b5e
+00004b5e	anim_script_play_tick	per-frame step of the $4b5e player: one anim_script_step, redraw, back to $4b5e
+00004b72	actor_release_self	jmp actor_release ($54a... $562): end-of-sequence cleanup used by the anim players
+00004c8e	bend_club_check	clears shot_bend $102d29 when it is 1 and the club type from bag_get_club $80f56 is outside $0a..$14 (1I..SW per the $8318e bag tables; woods 0-9 and putters $15/$16 lose it); bend 2 untouched; only caller shot_launch $4cd0
+00004cbe	shot_launch	the launch machine: builds vx/vy/vz/roll/spin/lift/wind from the club/mode/accuracy tables and seeds the ball state at $102c38+
+0000501c	accuracy_table_lookup	A1 = per-golfer accuracy table ($5038 ptrs by golfer id at (player+1)), D1 = club index * 8; returns the table row for $52f0/$52fa
+000052f0	accuracy_err_lo	D1 = row[0] (the low accuracy table entry) used as the accuracy term multiplier
+000052fa	accuracy_err_hi	D1 = row[4] (second accuracy table entry) for the vz term
+00005304	club_angle_get	D1 = per-golfer club angle ($5330 ptrs, 14 words indexed by club) -> $102c88 (12-bit turns)
+000053f0	club_base_get	D1 = per-golfer club base value ($5410 ptrs, 14 longs indexed by club)
+00005578	power_factor_get	power ($106fe6) -> the per-golfer power curve long ($55b2 list, index (power>>1)*4); the putter (bag slot $d) uses the 101-long ramp at $5c2a indexed by power*4 (1.0 at index 95); -> $102c8c
+00005dbe	launch_scale_h_get	D1 = word 0 of the launch-scale entry selected by $5de2 (<<16 >>10, $0400 = 1.0); multiplies shot_launch's horizontal speed
+00005dd0	launch_scale_v_get	D1 = word 2 of the same entry; multiplies shot_launch's vz chain
+00005de2	launch_scale_lookup	resolves the launch-scale table: golfer id (player+1) selects a $5e16 list long, then (player+3) + surface $106fd6 indexes the golfer's 15-long list at $5e2e+$3c*id -> table $5f96+$38k; D1 = bag slot*4
+00007446	ball_integrate_xy	x/y += vx/vy >> 4, clears $102cee and $102cef bits 1/2, ball_ground_proximity $7490, z += vz >> 4, ball_ground_proximity again; jsr from $5ad98
+00007490	ball_ground_proximity	sets $102cee bit 7 when ball_z <= ground_height_at_ball + 20.0 ($140000) or when ball_z < 0; bsr twice from ball_integrate_xy $7446
+000076a2	ball_terrain_word	terrain query at the ball: (x*4, y*4) integer words, jmp terrain_query_screen $5933e (d0.b = 0..$f or $ff); callers jsr at $7702 and $9698. The landing test and response start at $76bc (ball_airborne_landing_test)
+0000784c	ball_impact_spawn	when vz >= 2.0 (signed): spawns $7b44 if shot_bend == 1 and surface $102cd0 in {0,1,3}; spawns $819e on surface 8; only caller $7846
+000078a8	ball_landing_effects	surface 8 only (jsr at $7728): if the map attribute & $1f80 == $1280 and rng bit 0 is clear, $102d28 = random 0..$f; rts (does not continue into $793c)
+0000791c	ball_landing_sound_select	landing sound: d0 = surface type*8 + 0/2/4 (strength, +2 from $78de), word from the $7982 table queued through sound_cmd $804de; no divot involved
+0000793c	ball_landing_sound_type8	surface-8 landing sound only (no spawn): attribute class $1280 -> $10ab; else bset #7 of $102db6 picks $10ae (bit was clear) or $10ad (bit was set); $102db6 is cleared at $4cbe
+000079e2	ball_ground_rest_check	jsr at $7842: surface 8 clears shot_bend; if shot_bend == 1 and ball_roll2 != 0: clears shot_bend, runs $68e10 and spawns $7b88
+00007a22	ball_roll_spin_transfer	roll phase: converts the remaining roll ($102c50) through the surface +$8 table into a velocity kick along the unit vector, tracks the along-slope term $102d2e, and can reverse the kick
+00007b3c	ball_roll_store	tail of ball_roll_spin_transfer $7a22 (flow from $7b36): stores d0 into $102c50 and returns
+00007b44	ball_impact_effect	spawn: $7886 lea ($7b44,PC),a1 -> jsr $4c6 at $788a (functions-0000784c ball_impact_spawn)
+00007b70	actor_anim_wait_delete	state installed at $7b6a: camera_shift_actor $59218 then script_interp $68618; carry set (op 9 stop) -> jmp $54a (release), carry clear -> rts
+00007b88	ball_ground_rest_effect	spawn: $7a16 lea ($7b88,PC),a1 -> jsr $4c6 at $7a1a (functions-000079e2 ball_ground_rest_check)
+00007bc6	actor_script_handoff	straddle fold: jmp $68618 hands the actor to the script interpreter; fall-through from blocks-00007b88
+00007c1a	rest_effect_child_actor	first state of the child actor spawned by ball_ground_rest_effect $7b88 (lea ($7c1a,PC),a1): a0 = current_player_record, priority (+$3c) = record +8, then falls into $7c20
+00007c20	ball_rest_fx_child	fall-through from 0x7c1a (first state of the child spawned by 0x7b88, a0 = current_player_record): priority = player record +8, palette $218, script $7c5c (4-frame loop), state $7c46 follows the parent's x/y each frame
+00007c78	ball_landing_deflect	bounce reflection: n = (0.4472 sin, 0.4472 (-cos), 0.8944) of direction d0*$100 (12-bit turns); v += -2(v.n)n; surface type 8 only negates vz; called from $7740
+00007d6c	ball_map_point	returns d0 = int(4*ball_x), d1 = int(4*ball_y) - (3*int(64*ball_z))>>6 for map_cell_query (callers 0x78a8/0x793c/0x981a/0x59c18); reads no terrain
+00007d96	obstacle_list_build	builds obstacle_list $102d3a {ptr, kind} from the hole-object slots $102b84 (start slot 0 when rng&3 == 0, else slot 1) within $38 map units of the ball; bsr from 0x7f3c
+00007e90	obstacle_list_build_tail	tail of 0x7d96: x test, append, slot step, terminator
+00007eba	ball_motion_sweep	16-substep collision sweep of the frame step: moves the ball in v>>8 steps from the previous position, tests terrain/ground per sub-step and lands through $7748 logic
+0000800a	hole_band_contact	sweep contact against the per-hole y band $10d4d2..$10d4d4 (hole_band_lookup 0x5a19c): inside, z > -53.33 = no contact; within 9.0 below lo: cell test 0x80c0 (cell $1100..$127f -> $10af, 0x811e actor, ball_state_flags bit 1; else $10ab, 0x819e actor) then vy reflection; above hi: reflection
+0000811e	fx_actor_8168	first state of the actor spawned at 0x80f4: script $8168, ball screen x/y, priority = player record +8, state $8150 (camera shift + script, release on stop)
+0000819e	fx_actor_81a6	first state: a0 = script $81a6, bra 0x8122; spawned at 0x789c/0x8112/0x83dc
+000081c4	ball_z_snap_off_pin	re-seats ball_z to the ground height unless |dx|+|dy| to the pin $10d4c6/$10d4ca < 2.0; d0 is not a result
+00008200	obstacle_collision_check	entry 1: ball_obstacle_depth = |ball_z - $102cea|; entry 2 0x821a walks obstacle_list, tests {depth lo, hi, radius, handler} records from the $8662 kind table with the $87a2 sqrt grid, runs the $8656 handler
+0000839c	ball_speed_announce	fall-through tail of obstacle handler 0 $8388 (d0 = $1093 set at $8398): int(ball_speed) >= 8 (signed word compare) -> $1046; queues the code via sound_cmd $804de (a sound command, not a HUD message)
+00008516	ball_collision_fixup	post-collision fix-up: vec2_normalize (speed + unit direction, velocity unchanged) then ball_reseat_after_collision $913c, rts; reached by the $83b4 fall-through and bra at $8548/$8560/$8582/$85e6
+0000859e	ball_deflect_hard_rotate_tail	tail of ball_collision_deflect_hard_cases' d0 < -$3b20 case (fall-through from $8584, needs its stack and d0): vx' = vx*$ec83 + vy*$61f7, vy' = vy*$ec83 - vx*$61f7 (22.5 degrees), bra ball_collision_fixup; the old $85a0 entry was a sine-table value
+000085ea	ball_collision_deflect_soft	collision response: sets $102cef bit 2 (already set -> return), and unless bit 1 is set scales vx/vy/vz by $f000 (0.9375) and announces $1045
+0000913c	ball_reseat_after_collision	places the ball at radius table[$9124 + $10ebbc] + 0.5 from ball_anchor: along the velocity unit vector when moving and $10ebbc != $14, else radially (ball-anchor)*r/d; d = 0 nudges ball_x by +-r by the side of pin_x; called from $851a (ball_collision_fixup)
+000092c2	cup_deflect_rotate_a	tail of the $925a deflection block: +30 degree rotation (constants $ffff224c = -0.866 and $8000 = 0.5), then the shared halving tail $93c8; reached by fall-through from $92c0; the old $92c4 entry was a sine-table value
+00009316	cup_deflect_mirror	fall-through split inside the $92fe band of the $925a deflection (no branch reaches it; its only "reference" is the sine value at $15b4): stores the reflection (vx',vy') = (-vy,-vx), bra $93c8
+000093b8	cup_deflect_rotate_b	tail of the $925a deflection block: -30 degree rotation (constants $ffff224c = -0.866 and $8000 = 0.5), falls into the shared vx,vy *= 0.5 tail $93c8; reached by fall-through from $93b2; the old $93ba entry was a sine-table value
+000093fa	ball_surface_classify	surface type at the ball ($5b974) into $102cd0 and $106fd6; 6/7 -> $9504, $b -> $9430/$945e (lie byte), else $94ae; bsr from $770c and $960a
+0000945e	ball_surface_b_lie_pick	part of the surface $b case ($9430 in $93fa): picks a byte 0..3 from the $9104/$910c/$9114/$911c tables (band by int(vz), index rng & 7) into current player record +3 (read by launch_scale_lookup $5de2), 0 when already rolling; nonzero spawns $48f6 and sets bit 1; not a sound; fall-through split from cmpi.w #-$6,d1 at $945a (the long $945e at $15c4 is a sine value)
+000094ae	ball_surface_default_case	default surface case (bne.w $94ae in $93fa): surface 3 with ball_state_flags bit 0 clear and pin distance <= $3000 -> ball_hole_out_event $bc78 + code $103b via $804de; else, bit 0 clear and $102d28 <= $f -> spawns $4a98; no speed test
+00009504	ball_surface_6_7_case	surface 6/7 case (beq at $941c/$9424): spawns $4ae8; queues code $1048 when rolling (bit 0 set) else $1049, or $10af when ball_z < -$1aa800 (via $804de); C clear from $954e sets ball_state_flags bit 1; 6/7 have zero roll friction in $7346, game meaning unproven
+00009544	ball_motion_end_flag_set	sets bit 1 of ball_state_flags $102c38 (motion over; also set by the OB clamp $5b1a0, $974a, $4cbe and ball_hole_out_event $bc78) and returns; $5ac64 leaves the flight/roll update on it
+0000954e	ball_vel_z_get	jsr from covered $953a (jsr ($954e,PC)) (blocks-00009504)
+00009554	ball_shallow_descent_tail	C=1 when d0 = ball_vel_z < -2.0 and 4*|d0| < ball_speed ($102c3c); fall-through split from ball_vel_z_get ($954e, jsr from $953a), no reference (the long $9554 at $15d0 is a p1_sin_quadrant_table value)
+0000958c	pin_distance	distance from the ball ($102c68/$102c6c) to the pin ($10d4c6/$10d4ca) through the vector length $59e0e
+000095aa	ball_roll_step	per-frame roll step (jsr from $5add2 when ball_state_flags bit 0 is set): clears $102c5c/$102c60, vec2_normalize, ball_motion_sweep $7eba unless $107082 < 0, $81c4; saved int(z) >= 0, ball_y > pin_y+8 and ball_z < 0 -> clears bit 0 and zeroes z/vz (purpose unknown); else $93fa, bit 1 -> $9764, $107082 < 0 -> $b14a/$b93c, else $964a
+00009648	rts_stub_a	final rts of the $95aa roll step (fall-through from $9640); not a state-table entry; its only "reference" is the sine value at $15dc
+0000964a	ball_roll_friction	rolling step (bpl $9620 / ble $963c in $95aa): vx/vy *= surface friction ($97ee, $7346 +$c by $106fd6); surface 3: putt_slope_force $b06a (+ $b0c4 when $107082 < 0) then the stop tests; other surfaces: the terrain word low nibble ($76a2) gives a 22.5-degree direction, v += 0.125*(sin,-cos), rts
+0000974a	ball_stop_and_zero	sets ball flag bit 1 and zeroes the velocity - the ball has stopped
+00009764	rts_stub_b	rts of ball_stop_and_zero $974a, shared exit (branch targets: 5 in $964a, 1 in $95aa); not a state-table entry
+00009766	ball_pin_push_out	push-out, not a pull: when $107082 == 1 and pin distance d is in ($3000, $6000], ball = pin + (ball-pin)*$6000/d and C = 1 ($97de); else C = 0 ($97ea); its only caller (jsr at $973a) passes d <= $3000 (or <= $6000 when $107082 < 0), so the body cannot fire from there
+000097de	ball_pin_push_out_y_store	flow tail of $9766: stores the pushed-out y and returns C = 1; its only "reference" ($15f0) is a sine value
+000097ea	surface_friction_get	$97ea = and.b d0,d0 / rts: the C = 0 exit of $9766 (bne/ble/bgt at $976e/$977e/$9788); the friction lookup starts at $97ee: $7346 +$c by $106fd6<<4, forced to $c000 when $107082 < 0 and surface != 3
+00009848	terrain_slope_selector	second half of the slope decode: folds the D2 sub-position bit into the selector and returns the masked table byte
+0000985c	terrain_slope_invalid	returns -1: the "no slope" result of the terrain slope decode
+0000b06a	putt_slope_force	terrain_slope_at_ball ($981a) slope byte: bits 0-1 class 1..3 index the force words $2d4/$400/$653 at $b062, bits 4-7 the direction (nibble<<8, 12-bit angle); vx += F*sin, vy += F*-cos; called from $9682 when $106fd6 == 3
+0000b1a8	putt_state_dispatch	not a function: fall-through tail of $b14a; d0 = ($102cf0*4 + $102cf1)*4 indexes the 16 longs at $b1ae (4x4 state transitions) -> $b1f6/$b208/$b20c; its Ghidra "ref" $1748 is a sine-table value
+0000b1ee	putt_zero_vz	clears vz ($102c48); bgt.w target at $b160 (pin distance > $30000) in $b14a; its rts at $b1f4 is the beq.w target at $b152; "on the green" is unproven
+0000b1f6	putt_state_set_z	$b1ae table target for transitions 0->0 and 3->3: ball_z := pin plane $10d4ce and vz := 0
+0000b208	putt_roll_state	table targets $b208 (bra $b210) / $b20c (bra $b32c); body: putt_pace_apply == 1, depth test -> $b378, z on the radius-$4000 circle at distance $6000, radial push along (ball-pin)/dist when speed < $4000, then $b4d4
+0000b300	putt_aim_vector	not an entry: fall-through tail of $b2d6, (ball - pin)/distance (pin-to-ball unit vector) into $102d16/$102d1a; no caller
+0000b32c	putt_state_entry_b	second $b1ae dispatch entry: checks the pace byte and falls into $b378 / the shared states
+0000b358	compute_putt_pace_ratio	D0 = $102d0a = $6000 / ($102d02 + $102cf6) (putt_depth_term + putt_pin_distance); jsr from $b378/$b510/$b986
+0000b378	putt_cup_edge_bounce	repositions the ball onto the $6000 edge ($b51a ratio scale or $b588 step back along v), sound $1095/$1040/$103f once per putt_hole_flag bit 7, reflects v about the pin-to-ball unit vector (p = $102d02/$4000); entered by blt.w at $b236 and bra.w at $b34e; the real hole-out is $bc78
+0000b59c	putt_xyz_follow	tail of putt_step_back_along_v (fall-through only): t = d0/ball_speed, ball_x/y/z += t*ball_vel_x/y/z (along the velocity); no $b59c/$b59e long exists in the ROM
+0000b5e6	ball_drop_depth_test	d0 = -8*ball_height_delta, falls into $b5ee: C=0 when ball_z < pin plane - $800, else ball_z := flag_object_height, C=1; jsr from $b338
+0000b5ee	ball_drop_depth_test_d0	d0 > $4000 -> $b608 (C=0); else ball_z := flag_object_height, C=1; reached only from $b5e6
+0000b608	ball_drop_depth_false	clears C (and.w d0,d0) and returns: the C=0 result of the $b5ee depth test (ball more than $800 below the pin plane); only entry the bgt at $b5f4
+0000b60c	putt_pace_apply	lateral offset ($b94a) gate: |off| > $6000 -> d0.b=$ff; pin dist > $6000 -> d0=offset; else vel_z -= $1400, $102d02 from depth ($b8ec), d0 = (pace+dist >= $6000); jsr from $b210/$b32c
+0000b664	putt_along_heading	(ball - pin) . ball_unit (the unit velocity from vec2_normalize, not an aim vector) into $102cf2; callers $b06a, $b6fc, $d00a, $6ecb4
+0000b6a0	putt_roll_step	below-pin-plane tick: trap #15 unless $107083, vz -= $a000, pos += v>>4, radius-$6000 rescale and radial bounce ($b986/$ba1c/$ba2a), floor at pin plane - $c000 with 0.7 bounce, settle sets ball_state_flags bit 1 and code $103c
+0000b820	putt_bounce_follow	after a bounce with vz > 0.5: code $108e (vz >= 1.0) / $108f, vx/vy *= 0.5, pos += v*ball_deflect_scale; only entry bgt at $b7ea
+0000b8b4	putt_distance_gate	lone rts; putt_roll_state_pick at $b8b6 stores putt_state_current 0..3 from pin dist vs $6000 and the putt_along_aim sign
+0000b8ec	putt_depth_term_set	$102d02 from depth below the pin plane: 0 / $4000 / sqrt($1000-($4000+delta)^2); nothing is pulled; jsr from $b4f6/$b642/$b6e4
+0000b93c	ball_height_delta	returns ball z - pin-plane z ($102c70 - $10d4ce)
+0000b94a	putt_lateral_offset_calc	uy*(px-bx) - ux*(py-by) -> d0 and $102cfa (lateral offset of the pin from the travel line); only caller $b60c
+0000b986	putt_radius_rescale	r = $6000/(pace+dist) ($b358); pace, dist *= r; putt_approach_scale = (r-1)*dist/speed; pos += v*scale
+0000baa4	ball_direction_octant	classifies the ball heading into 8 sectors: compares the unit vector against the 22.5-degree boundary table at $bae0 (+-0x61f7/+-0xec83), sign of ux negates the index; a |uy| > 1.0 path falls into the leftover debug print at $baf4
+0000bad4	ball_direction_class	ball roll-direction class 0..7: ball_direction_octant then andi #$7; indexes the 8-byte records at $40be in ball_frame_anim_select
+0000bb4c	ball_octant_error_print	tail of $baa4's debug path: draws "V COS ERROR!" ($bb5a) at fix $71a7 (attr $1300) via fix_tile_string_draw $d828, d2 = 0; not a sound
+0000bb68	ball_state_debug_readout	debug readout of the ball state (dev_flags bit 3): prints the ball position/velocity/speed/pin-distance longs with number_draw_8 at fix $70ce..$70d9 (attribute $1300) and the label column; the name is historical
+0000bc78	ball_hole_out_event	sets $102eb9 bit 7 (no attract demo), $107083 = $ff, record +$22 = 1; when $107082 == 1 ball x/y := pin, ball_state_flags bit 1; callers $94ae, $964a, $b06a
+0000bcc8	view_axis_to_target_set	clears $102c3a; target = pin*4, or object 0 (bit 7 of $102c3a) when the word distance exceeds $80b7a[rec+1]; putt_pin_distance = |target-ball|, view_axis_x/y = unit(target-ball), (1,0) at distance 0
+0000bdc6	aim_vector_set	a = $10707e - $107080 (12-bit); (C,S) from the $337e/$3982 t/sqrt(1+t^2) tables (t=a/444) or the $bece curve (t=a/249.3, when $107082 == $ff); aim_unit = view_axis turned by atan(t)
+0000caec	shot_sound_actor_main	MAME modes trace: reader PCs $caf2 (count 2) / $cb12 (count 135) + exec bytes $cb90-$cb9e; executed head of the former p1_beda_curve_table row
+0000cbbc	shot_sound_stop_other	fall-through stop path of the shot sound-command actor (surfaces other than 0/1/3): sound command $1068, plus $116c when the surface (not a club class) is 5/6/7, then $cbf0 actor_wait_children_then_release; no HUD (semantic-review-p1-0cad2)
+0000cbea	shot_sound_send_release	jsr sound_cmd_send_gated 0x804de with the command in D0, then falls into the $cbf0 release; no message print (semantic-review-p1-0cad2)
+0000cbf6	shot_sound_stop_green	MAME modes trace: entry fetch at $cbf6 (jump from the $cb9a beq in shot_sound_actor_main)
+0000cc12	shot_sound_green_shot1_holder	surface 3 stop, shot number 1 and player == contest_record_holder: sound commands $106c, $106a, $116d via 0x804de, then release; no HUD (semantic-review-p1-0cad2)
+0000cc2c	shot_sound_green_by_par	MAME modes trace: entry fetch at $cc2c from the covered $cc0e bne + exec bytes $cc2e-$cc48/$cc6a-$cc72/$cc8e-$cc9c
+0000ccae	shot_sound_green_par2_close	surface 3, shot == par-2, target_distance <= 4: sound command $106c, plus $1174 on a non-holed shot ($107083 == 0); no sand/bunker test, no HUD (semantic-review-p1-0cad2)
+0000cccc	shot_sound_release_b	bra to the $cbf0 children-wait release (reached from $ccbe and the fall-through from $ccc6); no message step (semantic-review-p1-0cad2)
+0000ccd0	shot_sound_green_par2_far	flow: bhi $ccd0 / bne $ccfc from shot_sound_green_by_par ($cc2c)
+0000cd28	shot_sound_green_lie_set	surface 3, shot > par-2, shot_lie_copy in {6,$b,2} and target_distance <= $20: sound commands $116f, $106d, then release; fall-through from $cd24; no water/penalty test (semantic-review-p1-0cad2)
+0000cd3a	shot_sound_green_other	flow: beq $cd42 / bmi $ce32 from shot_sound_actor_main ($caec), bhi $cd3a from shot_sound_green_par2_far ($ccd0)
+0000ce8e	shot_sound_putt_over_par2	putt state, shot > par-2: sound command $106e, installs state $ce9e at $ce98 and falls in (semantic-review-p1-0cad2)
+0000ce9e	shot_sound_roll_state	state: jsr $d00a (rolling-ball one-shot sound step) then rts; never releases, waits for nothing (semantic-review-p1-0cad2)
+0000cea4	shot_sound_type0_near_check	hole_object_find(0) -> first type-0 object x/y, vec2_length_word against the player record +4/+8 words, <= $c8 sends sound command $1068; positions nothing; called by jsr ($cea4,PC) from the $cd42 path (semantic-review-p1-0cad2)
+0000ced4	shot_sound_landing_step	MAME modes trace: entry fetch at $ced4 from the $cb42 jsr in shot_sound_actor_main (count 352)
+0000cf00	shot_sound_off_green	rolling with prev_ball_lie == 3: surface now != 3 sends $1068 always, plus $1177 when shot_distance_word < $1e; no club class, $10d4ac is the shot distance, no latch (semantic-review-p1-0cad2)
+0000cf2e	shot_sound_landing_pick	landing sound-command pick, called from $cee4 while +$46 != 1: surface 3: par != 3 and shot < par-2 -> $105e,$1175, else shot_distance_word >= $10e -> $105e, else shot == par-2 -> $105e, else generic; generic $cf92: surface 5/6/7/$b with shot - par >= 0 -> $106c, else >= $12c $105e, >= $118 $105d, below -> +$46 = $80 (retried next frame); no club advice (semantic-review-p1-0cad2)
+0000d00a	hud_message_actor_step	legacy name: rolling-putt advice step; holed/nonrolling gates, along-aim cache, distance word and one-shot sound commands $1068/$1069/$1176; no actor positioning/display timer/release
+0000d0cc	shot_vs_par_minus2_check	MAME modes trace: entry fetch at $d0cc; jsr ($d0cc,pc) callers in shot_sound_green_by_par/shot_sound_landing_pick/shot_sound_green_other; d0 = par (0x5897a), d1 = shot number (current record +2), d2 = par - 2 (1/2/3 for par 3/4/5); returns the flags of cmp.b d1,d2 (bls = shot number >= par - 2); no golfer id
+0000d142	sprite_map_col_a	allocates D0 background sprite columns; unsigned end <= sprite_area_start accepted, overflow traps; $d1ae programs SCB3 column control and SCB2 shrink, not tile-map data
+0000d172	sprite_map_col_b	allocates D0 foreground sprite columns; unsigned end <= $17c accepted, overflow traps rather than clamps; branches to shared $d15e control/shrink setup
+0000d18c	scb_range_reset	clears SCB3 control words for inclusive sprite-slot range D0..D1 at $8201+slot, explicit VRAM address/data pairs; not a single SCB1 entry
+0000d1ae	sprite_map_blit_core	legacy name: column-control setup; first SCB3 slot gets zero, subsequent slots get chain bit $40; all SCB2 shrink words $fff; no map/tile/attribute reads
+0000d29c	scb_bg_col_reset_pair	dead reset pair after rts $d29a; second entry after rts $d2b6; MAME fetches are prefetch, not executed starts; closed-world proof excludes both
+0000d2ce	sprite_map_blit_wrap_d2ce	background allocation plus fall-through map placement: input D0 columns,D1 rows,D4.b flips; packed D4 rows:columns and returned first/last slot bounds feed $d2e2
+0000d326	sprite_map_blit_wrap_d326	foreground counterpart of $d2ce, unsigned allocation overflow traps; explicit branch to map placement $d2e2
+0000d33c	scb_write_shrink_wrap	dead wrapper after unconditional bra $d2e2 at $d33a; captures allocated first/last slots and falls through to $d34a; old MAME fetch claim was prefetch
+0000d3d8	sprite_map_blit_fg_place	legacy name: foreground map-allocation/placement wrapper then $d34a shrink; only caller 0x6b446 passes D1 = $10, which $d3d8 does not save, so $d34a uses the last allocated slot as its row term (original-code defect); 0x6b49c rewrites the slots with row term 16; nothing is filled (semantic-review-p1-0cad2)
+0000d3ec	sprite_row_fill	legacy name: sprite-run position/shrink setup; A0/A1 first/last slots, D0 inclusive count, D1 from input D4 row term; tails $d34a, not a constant tile fill
+0000d3fc	scb_tile_row_write	clears 32 SCB1 tile-ID words per inclusive sprite-slot range D0..D1 using $d414; no attribute or fix-layer writes
+0000d414	scb_tile_index	legacy name: zero tile-ID run; incoming D3 ignored; address=(D0+1)*64+D1*2, D1 is tile index and D2 count; writes zero at stride two words
+0000d430	vblank_handler	per-vblank work: LSPC ack $3c000c, watchdog poke while $102e59 <= $14, the $d4c8 display driver, palette upload and VRAM flush, display calls $6a134/$6a2f6
+0000d4c8	display_driver_step	legacy name: drain task ring until cursor=head, advance cursor modulo eight, load handler A0/actor A6 from task_table and call handler; saves/restores vram_addr_shadow word
+0000d510	task_schedule	queues the task {a0 handler, a6 node} in the 8-slot table 0x102e60 (8 bytes per slot) at index 0x102ea1+1 mod 8 unless that equals 0x102ea0 (full); config/ram calls the table task_table
+00054d2c	actor_draw_alt_trampoline	MAME tap: 392-1603 reads/scenario (demo-swing marks); fetch at $54d2c via covered $54d16 bne.w $54d2a
+0005933a	return_zero_5933a	MAME modes trace: fetch at $5933a, fall-through from covered 00059312.s
+00004970	surface_b_effect_tick	runtime: task routine pointer move.l #$4970,(a6) at covered $4968 + jsr (a0) target prefetch at covered $5c2 (actor_main_loop) in PLAY_H1/PLAY_H4/GAP_SWEEP; the rts at $49b0/$49b6 prefetches its return site $4974 (bsr.w $498a at $4970)
+00008388	obstacle_handler0	obstacle response handler 0: p1_8656_dispatch entry 0, called by jsr (a3) at $837a; once-only via ball_collision_flags bit 0 (bset, bne -> rts $83b2), jsr $925a, then falls into $839c
+0000925a	cup_lip_deflect_entry	jsr ($925a,PC) at $8394 (only caller; obstacle handler 0 $8388): the signed offset of the ball from the pin across the travel line picks one of five responses (+30 deg rotate, reflect, reverse, swap, -30 deg rotate), then vx,vy *= 0.5 at $93c8; "cup lip" is unproven; the covered 000092c2.s header documents its interior split
+000092fe	cup_lip_band_mirror	runtime: blt $92fe target prefetch at $9294 (cup_lip_deflect_entry) + exec $9302-$9307 in GAP_SWEEP/PLAY_H1/TELESINK; falls through into the covered 00009316.s (cup_deflect_mirror), which starts mid-instruction at $9316
+00009328	cup_lip_neg_ladder	runtime: blt $9328 target prefetch at $9304 (the $92fe band) + exec $932c-$9341 in GAP_SWEEP/PLAY_H1/TELESINK; the covered 00009316.s at $9324 branches here when the mid band fails; all paths join the covered $93c8 tail
+0000b588	putt_step_back_along_v	static: lea ($b588,PC),a0 at $b3be + jsr (a0) at $b3da (indirect_targets row b3da); d0 = $6000-(dist+pace), falls into $b59c which moves x/y/z by d0/ball_speed * v
+0000307a	hole_object_type12_child	static: pointer $30ac at $2e28 in the covered object-type table [$2e06,$2e34) (consumed by hole_object_actors_spawn $2dd6); the $307a entry is spawned by lea ($307a,PC),a1 + jsr actor_spawn_child ($4c6) at $30ac; untouched by the 21 scenarios
+00003244	hole_object_type9_state	static: pointer $3244 at $2e1c in the covered object-type table [$2e06,$2e34) (consumed by hole_object_actors_spawn $2dd6); installs the covered $32de actor script via script_install $68600 and polls it with script_interp $68618; untouched by the 21 scenarios
+0000cad2	shot_sound_actor	static: spawned as an actor state by lea $cad2.l,a1 + jsr actor_spawn_child ($4c6) at covered $5ad32 (0005ac64.s); runtime: task-pump jsr (a0) target prefetch at covered $5c2 fetches $cad2/$cad4 and exec words $cad6-$caeb (28x, PLAY_H1/PLAY_H4/GAP_SWEEP); falls through into the covered shot_sound_actor_main ($caec)
